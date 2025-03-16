@@ -1,29 +1,59 @@
 "use client"
 
 import * as React from "react"
-import * as SwitchPrimitives from "@radix-ui/react-switch"
-
 import { cn } from "@/lib/utils"
 
 const Switch = React.forwardRef<
-  React.ElementRef<typeof SwitchPrimitives.Root>,
-  React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
->(({ className, ...props }, ref) => (
-  <SwitchPrimitives.Root
-    className={cn(
-      "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input",
-      className
-    )}
-    {...props}
-    ref={ref}
-  >
-    <SwitchPrimitives.Thumb
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement> & {
+    onCheckedChange?: (checked: boolean) => void
+  }
+>(({ className, onCheckedChange, checked, defaultChecked, ...props }, ref) => {
+  const [isChecked, setIsChecked] = React.useState(
+    checked !== undefined ? checked : defaultChecked || false
+  )
+
+  React.useEffect(() => {
+    if (checked !== undefined) {
+      setIsChecked(checked)
+    }
+  }, [checked])
+
+  const handleToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newChecked = e.target.checked
+    if (checked === undefined) {
+      setIsChecked(newChecked)
+    }
+    onCheckedChange?.(newChecked)
+  }
+
+  return (
+    <label
       className={cn(
-        "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
+        "inline-flex items-center cursor-pointer relative",
+        className
       )}
-    />
-  </SwitchPrimitives.Root>
-))
-Switch.displayName = SwitchPrimitives.Root.displayName
+    >
+      <input
+        type="checkbox"
+        className="sr-only peer"
+        checked={isChecked}
+        onChange={handleToggle}
+        ref={ref}
+        {...props}
+      />
+      <div className={cn(
+        "w-11 h-6 bg-input rounded-full peer",
+        "peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring peer-focus:ring-offset-2",
+        "peer-checked:after:translate-x-5 peer-checked:bg-primary",
+        "after:content-[''] after:absolute after:top-[2px] after:left-[2px]",
+        "after:bg-white after:rounded-full after:h-5 after:w-5",
+        "after:transition-all after:duration-300 ease-in-out"
+      )} />
+    </label>
+  )
+})
+
+Switch.displayName = "Switch"
 
 export { Switch }

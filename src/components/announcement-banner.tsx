@@ -1,65 +1,49 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { X } from "lucide-react"
 import { useAnnouncement } from "@/contexts/announcement-context"
 import { Button } from "@/components/ui/button"
-import { motion, AnimatePresence } from "framer-motion"
 
 export function AnnouncementBanner() {
   const { currentAnnouncement, isAnnouncementVisible, setAnnouncementVisible } = useAnnouncement()
-  const [isDismissed, setIsDismissed] = useState(false)
+  const [mounted, setMounted] = useState(false)
   
-  // Clear dismissal when announcement changes
+  // Prevent hydration mismatch
   useEffect(() => {
-    if (currentAnnouncement) {
-      setIsDismissed(false)
-    }
-  }, [currentAnnouncement?.id])
+    setMounted(true)
+  }, [])
   
-  // Check if banner should be displayed
-  if (!currentAnnouncement || !isAnnouncementVisible || isDismissed) {
-    return null
-  }
-
-  // Handle dismissal
-  const handleDismiss = () => {
-    setIsDismissed(true)
-  }
-
-  const bannerContent = (
-    <div className="py-2 px-4 text-sm flex items-center justify-center text-center gap-x-4 relative bg-primary text-primary-foreground">
-      <div className="flex-1 flex justify-center">
+  if (!mounted) return null
+  
+  // If no announcement or announcement is hidden, don't render
+  if (!currentAnnouncement || !isAnnouncementVisible) return null
+  
+  return (
+    <div className="bg-primary text-primary-foreground py-2 px-4 relative text-center text-sm">
+      <div className="container flex items-center justify-center">
         {currentAnnouncement.link ? (
-          <Link href={currentAnnouncement.link} className="hover:underline font-medium inline-block">
+          <Link 
+            href={currentAnnouncement.link}
+            className="hover:underline"
+          >
             {currentAnnouncement.text}
           </Link>
         ) : (
-          <span className="font-medium">{currentAnnouncement.text}</span>
+          <span>{currentAnnouncement.text}</span>
         )}
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6"
+          onClick={() => setAnnouncementVisible(false)}
+        >
+          <X className="h-3 w-3" />
+          <span className="sr-only">Dismiss</span>
+        </Button>
       </div>
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className="h-6 w-6 absolute right-2 rounded-full"
-        onClick={handleDismiss}
-      >
-        <X className="h-3 w-3" />
-        <span className="sr-only">Dismiss</span>
-      </Button>
     </div>
-  )
-  
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ height: 0, opacity: 0 }}
-        animate={{ height: "auto", opacity: 1 }}
-        exit={{ height: 0, opacity: 0 }}
-      >
-        {bannerContent}
-      </motion.div>
-    </AnimatePresence>
   )
 }

@@ -12,10 +12,10 @@ export default function ProductNotFound() {
       </p>
       <div className="flex gap-4">
         <Button asChild>
-          <Link href="/products">Browse All Products</Link>
+          <Link href="/products">Browse Products</Link>
         </Button>
         <Button variant="outline" asChild>
-          <Link href="/">Return to Home</Link>
+          <Link href="/">Return Home</Link>
         </Button>
       </div>
     </div>

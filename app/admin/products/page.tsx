@@ -3,7 +3,6 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Metadata } from "next"
 import { 
   Edit, 
   Trash2, 
@@ -34,10 +33,7 @@ import { formatPrice } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
 import { mockProducts } from "@/lib/api" // Using mock data for now
 
-export const metadata: Metadata = {
-  title: "Products - MyBags Admin",
-  description: "Manage your product inventory",
-}
+// Removed metadata export - this is a Client Component
 
 export default function ProductsPage() {
   const [products, setProducts] = useState(mockProducts)
