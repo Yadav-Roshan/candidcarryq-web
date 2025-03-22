@@ -2,20 +2,20 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/providers/theme-provider'
-import { CartProvider } from '@/contexts/cart-context'
-import { WishlistProvider } from '@/contexts/wishlist-context'
-import { AuthProvider } from '@/contexts/auth-context'
-import { AnnouncementProvider } from '@/contexts/announcement-context'
-import { Toaster } from '@/components/ui/toaster'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
+import { Toaster } from '@/components/ui/toaster'
+import { AuthProvider } from '@/contexts/auth-context'
+import { CartProvider } from '@/contexts/cart-context'
+import { WishlistProvider } from '@/contexts/wishlist-context'
+import { AnnouncementProvider } from '@/contexts/announcement-context'
 import { AnnouncementBanner } from '@/components/announcement-banner'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'MyBags - Premium Bag Store',
-  description: 'Shop premium quality bags, backpacks, and accessories',
+  title: 'CandidWear - Premium Bags & Accessories',
+  description: 'Discover premium quality bags and accessories at CandidWear.',
 }
 
 export default function RootLayout({
@@ -32,23 +32,21 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <CartProvider>
-            <WishlistProvider>
-              <AuthProvider>
+          <AuthProvider>
+            <CartProvider>
+              <WishlistProvider>
                 <AnnouncementProvider>
                   <div className="flex min-h-screen flex-col">
                     <AnnouncementBanner />
                     <Header />
-                    <main className="flex-1">
-                      {children}
-                    </main>
+                    <main className="flex-1">{children}</main>
                     <Footer />
-                    <Toaster />
                   </div>
+                  <Toaster />
                 </AnnouncementProvider>
-              </AuthProvider>
-            </WishlistProvider>
-          </CartProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -1,63 +1,38 @@
 import { Suspense } from "react"
-import { Metadata } from "next"
-import { getAllProducts } from "@/lib/api"
 import { ProductGrid } from "@/components/products/product-grid"
-import { 
-  Pagination, 
-  PaginationContent, 
-  PaginationItem, 
-  PaginationNext, 
-  PaginationPrevious 
-} from "@/components/ui/pagination"
-import ProductFilters from "@/components/products/product-filters"
-import ProductSort from "@/components/products/product-sort"
-import ProductsLoading from "@/components/products/products-loading"
+import { ProductFilters } from "@/components/products/product-filters"
+import { mockProducts } from "@/lib/api" // Using mock data for now
 
-export const metadata: Metadata = {
-  title: 'All Products - MyBags',
-  description: 'Browse our complete collection of bags and accessories',
+export const metadata = {
+  title: "Products - CandidWear",
+  description: "Explore our collection of high-quality products",
 }
 
-export const dynamic = 'force-dynamic'
-
-export default async function ProductsPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined }
-}) {
-  // Convert searchParams to the correct types
-  const page = searchParams.page ? parseInt(searchParams.page as string) : 1
-  const category = typeof searchParams.category === "string" ? searchParams.category : undefined
-  const sort = typeof searchParams.sort === "string" ? searchParams.sort : undefined
-
-  // Fetch products with the filters
-  const products = await getAllProducts({ page, category, sort })
-
+export default function ProductsPage() {
   return (
-    <div className="container py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">All Products</h1>
-        <ProductFilters />
-      </div>
+    <div className="container py-10">
+      <h1 className="text-3xl font-bold mb-4">Products</h1>
       
-      <Suspense fallback={<ProductsLoading />}>
-        <ProductGrid products={products} />
-      </Suspense>
-      
-      <div className="mt-12">
-        <Pagination>
-          <PaginationContent>
-            {page > 1 && (
-              <PaginationItem>
-                <PaginationPrevious href={`/products?page=${page - 1}`} />
-              </PaginationItem>
-            )}
-            <PaginationItem>Page {page}</PaginationItem>
-            <PaginationItem>
-              <PaginationNext href={`/products?page=${page + 1}`} />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Sidebar Filters */}
+        <div className="w-full lg:w-1/4">
+          <Suspense fallback={<div>Loading filters...</div>}>
+            <ProductFilters />
+          </Suspense>
+        </div>
+        
+        {/* Products Grid */}
+        <div className="w-full lg:w-3/4">
+          <Suspense fallback={<div>Loading products...</div>}>
+            <ProductGrid 
+              products={mockProducts} 
+              variant="default"
+              showCategory={true}
+              showRating={true}
+              showActions={true}
+            />
+          </Suspense>
+        </div>
       </div>
     </div>
   )

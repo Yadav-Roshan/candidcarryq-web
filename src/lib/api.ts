@@ -1,7 +1,7 @@
 import { Product } from "@/contexts/cart-context"
 
 // Mock data for products
-const mockProducts: Product[] = [
+const mockProductsData = [
   {
     id: "1",
     name: "Classic Leather Backpack",
@@ -100,21 +100,14 @@ const mockProducts: Product[] = [
   }
 ];
 
-// Mock product data
-const productData = [
-  { id: "1", name: "Urban Commuter Backpack", category: "backpacks", image: "", price: 3500 },
-  { id: "2", name: "Laptop Backpack Pro", category: "backpacks", image: "", price: 4200 },
-  { id: "3", name: "Leather Messenger Backpack", category: "backpacks", image: "", price: 4800 },
-  { id: "4", name: "Designer Tote", category: "handbags", image: "", price: 5600 },
-  { id: "5", name: "Evening Clutch", category: "handbags", image: "", price: 2900 },
-  { id: "6", name: "Everyday Handbag", category: "handbags", image: "", price: 3800 },
-  { id: "7", name: "Business Card Holder", category: "wallets", image: "", price: 1200 },
-  { id: "8", name: "Slim Bifold Wallet", category: "wallets", image: "", price: 1600 },
-  { id: "9", name: "Weekend Luggage", category: "travel", image: "", price: 7500 },
-  { id: "10", name: "Passport Holder", category: "travel", image: "", price: 950 },
-  { id: "11", name: "Premium Backpack", category: "backpacks", image: "", price: 5500, salePrice: 4500 },
-  { id: "12", name: "Leather Tote Bag", category: "handbags", image: "", price: 4800, salePrice: 3800 },
-];
+// Normalize the mock products data to avoid duplication
+export const mockProducts = mockProductsData.map(product => ({
+  ...product,
+  featured: ["1", "2", "6", "9"].includes(product.id),
+  stock: product.id === "10" ? 0 : Math.floor(Math.random() * 20) + 5,
+  createdAt: product.id === "7" ? "2023-10-20T00:00:00Z" : `2023-${Math.floor(Math.random() * 10) + 1}-${Math.floor(Math.random() * 28) + 1}T00:00:00Z`,
+  soldCount: Math.floor(Math.random() * 100) + 10
+}));
 
 interface ProductQueryParams {
   page?: number;
@@ -255,6 +248,3 @@ export async function searchProducts(query: string): Promise<Product[]> {
     product.description?.toLowerCase().includes(searchLower)
   );
 }
-
-// Export mockProducts for direct use in API routes
-export { mockProducts };

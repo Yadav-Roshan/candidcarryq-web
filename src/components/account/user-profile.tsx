@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { User, Mail, Phone, MapPin } from "lucide-react"
+import { User, Mail, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,8 +17,7 @@ export function UserProfile() {
   const [formData, setFormData] = useState({
     name: user?.name || "",
     email: user?.email || "",
-    phone: "098-765-4321", // Example data
-    address: "Thamel, Kathmandu",
+    phoneNumber: user?.phoneNumber || "",
   })
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,37 +101,19 @@ export function UserProfile() {
                   </div>
                   
                   <div className="grid gap-2">
-                    <Label htmlFor="phone">Phone Number</Label>
+                    <Label htmlFor="phoneNumber">Phone Number</Label>
                     {isEditing ? (
                       <Input 
-                        id="phone" 
-                        name="phone" 
-                        value={formData.phone} 
+                        id="phoneNumber" 
+                        name="phoneNumber" 
+                        value={formData.phoneNumber} 
                         onChange={handleChange} 
                         placeholder="Your phone number" 
                       />
                     ) : (
                       <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/50">
                         <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{formData.phone}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="address">Address</Label>
-                    {isEditing ? (
-                      <Input 
-                        id="address" 
-                        name="address" 
-                        value={formData.address} 
-                        onChange={handleChange} 
-                        placeholder="Your address" 
-                      />
-                    ) : (
-                      <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/50">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span>{formData.address}</span>
+                        <span>{formData.phoneNumber}</span>
                       </div>
                     )}
                   </div>

@@ -1,49 +1,39 @@
-import { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getProductById, getRelatedProducts } from "@/lib/api"
+import { Suspense } from "react"
 import { ProductDetails } from "@/components/products/product-details"
-import { ProductGrid } from "@/components/products/product-grid"
+import { mockProducts } from "@/lib/api" // Using mock data for now
 
-type Props = {
-  params: { id: string }
-}
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const product = await getProductById(params.id)
+export const generateMetadata = async ({ params }: { params: { id: string } }) => {
+  // Fetch product data
+  const product = mockProducts.find(p => p.id === params.id)
   
   if (!product) {
     return {
-      title: "Product Not Found - MyBags",
+      title: "Product Not Found - CandidWear",
       description: "The requested product could not be found."
     }
   }
   
   return {
-    title: `${product.name} - MyBags`,
-    description: product.description || `${product.name} available at MyBags`,
+    title: `${product.name} - CandidWear`,
+    description: product.description || "View product details and pricing."
   }
 }
 
-export default async function ProductPage({ params }: Props) {
-  const product = await getProductById(params.id)
+export default function ProductPage({ params }: { params: { id: string } }) {
+  // In a real app, you would fetch data from an API
+  const product = mockProducts.find(p => p.id === params.id)
   
+  // If product doesn't exist, return the not-found page
   if (!product) {
     notFound()
   }
   
-  // Get related products
-  const relatedProducts = await getRelatedProducts(product.id, product.category)
-  
   return (
-    <div className="container py-8">
-      <ProductDetails product={product} />
-      
-      {relatedProducts.length > 0 && (
-        <div className="mt-20">
-          <h2 className="text-2xl font-bold mb-6">You might also like</h2>
-          <ProductGrid products={relatedProducts} />
-        </div>
-      )}
+    <div className="container py-10">
+      <Suspense fallback={<div>Loading product details...</div>}>
+        <ProductDetails product={product} />
+      </Suspense>
     </div>
   )
 }

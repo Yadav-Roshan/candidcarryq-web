@@ -5,15 +5,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Format price to NPR currency (Latin script)
-export function formatPrice(price: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "NPR",
-    currencyDisplay: "narrowSymbol",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(price)
+// Format price to Nepali Rupees
+export function formatPrice(price: number): string {
+  return `NPR ${price.toLocaleString()}`
 }
 
 // Alternative format for NPR when Intl is not supported or for specific formatting needs
