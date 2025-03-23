@@ -1,67 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { connectToDatabase } from '@/lib/mongodb';
 import User from '@/models/user.model';
-import jwt from 'jsonwebtoken';
-import { z } from 'zod';
-
-// Schema for data validation
-const loginSchema = z.object({
-  identifier: z.string().min(1, 'Email or phone number is required'),
-  password: z.string().min(1, 'Password is required'),
-});
 
 export async function POST(request: NextRequest) {
   try {
+    const { identifier, password } = await request.json();
+
+    if (!identifier || !password) {
+      return NextResponse.json(
+        { message: 'Email/phone and password are required' },
+        { status: 400 }
+      );
+    }
+
+    // Connect to the database
     await connectToDatabase();
-    
-    // Parse and validate request body
-    const body = await request.json();
-    const validationResult = loginSchema.safeParse(body);
-    
-    if (!validationResult.success) {
-      return NextResponse.json({ 
-        message: 'Validation error', 
-        errors: validationResult.error.errors 
-      }, { status: 400 });
+
+    // Check if user exists by email or phone number
+    const user = await User.findOne({
+      $or: [{ email: identifier }, { phoneNumber: identifier }]
+    }).select('+password');  // Explicitly include password field
+
+    if (!user) {
+      return NextResponse.json(
+        { message: 'Invalid credentials' },
+        { status: 401 }
+      );
     }
-    
-    const { identifier, password } = validationResult.data;
-    
-    // Check if identifier is an email or phone number (basic format check)
-    const isEmail = identifier.includes('@');
-    
-    // Find user by email or phone number
-    let user;
-    if (isEmail) {
-      user = await User.findOne({ email: identifier }).select('+password');
-    } else {
-      // Normalize phone number (assuming phone numbers are stored with +)
-      const phoneNumber = identifier.startsWith('+') ? identifier : `+${identifier}`;
-      user = await User.findOne({ phoneNumber }).select('+password');
+
+    // Check password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return NextResponse.json(
+        { message: 'Invalid credentials' },
+        { status: 401 }
+      );
     }
-    
-    // Check if user exists and password is correct
-    if (!user || !(await user.comparePassword(password))) {
-      return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
-    }
-    
-    // Generate JWT token
+
+    // Generate JWT
     const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET as string,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: '7d' }
     );
-    
-    // Return user data without password
-    const userWithoutPassword = user.toJSON();
-    
+
+    // Create a sanitized user object without the password
+    const sanitizedUser = {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      role: user.role || 'user',
+      avatar: user.avatar || undefined,
+      address: user.address || undefined
+    };
+
     return NextResponse.json({
-      message: 'Login successful',
-      user: userWithoutPassword,
+      success: true,
       token,
+      user: sanitizedUser
     });
   } catch (error) {
     console.error('Login error:', error);
-    return NextResponse.json({ message: 'Server error' }, { status: 500 });
+    return NextResponse.json(
+      { message: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

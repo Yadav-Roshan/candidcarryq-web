@@ -1,76 +1,25 @@
-"use client"
-
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Mail } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { Button } from "@/components/ui/button"
 
-export function Newsletter() {
-  const [email, setEmail] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const { toast } = useToast()
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      toast({
-        title: "Invalid email",
-        description: "Please enter a valid email address",
-        variant: "destructive"
-      })
-      return
-    }
-    
-    setIsSubmitting(true)
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      toast({
-        title: "Subscription successful",
-        description: "Thank you for subscribing to our newsletter!",
-      })
-      
-      setEmail("")
-    } catch (error) {
-      toast({
-        title: "Subscription failed",
-        description: "There was an error subscribing to the newsletter. Please try again.",
-        variant: "destructive"
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-  
+export function NewsletterSubscription() {
   return (
-    <section className="py-16 bg-primary text-primary-foreground">
-      <div className="container text-center">
-        <Mail className="h-10 w-10 mx-auto mb-4" />
-        <h2 className="text-3xl font-bold mb-2">Stay Updated</h2>
-        <p className="text-lg mb-8 max-w-lg mx-auto">
-          Subscribe to our newsletter for new product announcements, exclusive offers, and more.
-        </p>
-        
-        <form onSubmit={handleSubmit} className="max-w-md mx-auto flex gap-2">
-          <Input
-            type="email"
-            placeholder="Your email address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="flex-1 bg-primary-foreground text-foreground"
-          />
-          <Button 
-            type="submit" 
-            variant="secondary" 
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Subscribing..." : "Subscribe"}
-          </Button>
-        </form>
+    <section className="w-full bg-secondary/10 py-16">
+      <div className="container">
+        <div className="max-w-xl mx-auto text-center">
+          <h3 className="text-2xl font-bold mb-3">Subscribe to Our Newsletter</h3>
+          <p className="text-muted-foreground mb-6">
+            Get updates on new products, exclusive offers, and more!
+          </p>
+          <form className="flex flex-col sm:flex-row gap-3">
+            <Input 
+              type="email" 
+              placeholder="Your email address" 
+              className="flex-1" 
+              required
+            />
+            <Button type="submit" className="px-8">Subscribe</Button>
+          </form>
+        </div>
       </div>
     </section>
   )

@@ -3,6 +3,8 @@ import { connectToDatabase } from '@/lib/mongodb';
 import Product from '@/models/product.model';
 import { authenticate, isAdmin } from '@/middleware/auth.middleware';
 import { z } from 'zod';
+import mongoose from 'mongoose';
+import { mockProducts } from '@/lib/api-mock-data';
 
 // Schema for updating product
 const updateProductSchema = z.object({
@@ -24,6 +26,11 @@ const updateProductSchema = z.object({
   stock: z.number().int().nonnegative('Stock must be a non-negative integer').optional(),
 });
 
+// Check if ID is a valid MongoDB ObjectId
+function isValidObjectId(id: string): boolean {
+  return mongoose.Types.ObjectId.isValid(id);
+}
+
 // GET - Get single product (public)
 export async function GET(
   request: NextRequest,
@@ -32,15 +39,39 @@ export async function GET(
   try {
     await connectToDatabase();
     
-    const product = await Product.findById(params.id);
+    const id = params.id;
+    
+    // Check if ID is a valid MongoDB ObjectId
+    if (!isValidObjectId(id)) {
+      // If not a valid ObjectId, check mock data
+      const mockProduct = mockProducts.find(p => p.id === id);
+      if (mockProduct) {
+        return NextResponse.json(mockProduct);
+      }
+      return NextResponse.json({ message: 'Product not found' }, { status: 404 });
+    }
+    
+    const product = await Product.findById(id);
     
     if (!product) {
+      // If not found in DB, check mock data
+      const mockProduct = mockProducts.find(p => p.id === id);
+      if (mockProduct) {
+        return NextResponse.json(mockProduct);
+      }
       return NextResponse.json({ message: 'Product not found' }, { status: 404 });
     }
     
     return NextResponse.json(product);
   } catch (error) {
     console.error('Error fetching product:', error);
+    
+    // Fallback to mock data on error
+    const mockProduct = mockProducts.find(p => p.id === params.id);
+    if (mockProduct) {
+      return NextResponse.json(mockProduct);
+    }
+    
     return NextResponse.json({ message: 'Server error' }, { status: 500 });
   }
 }

@@ -1,91 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
-import User, { IUser } from '@/models/user.model';
 import { connectToDatabase } from '@/lib/mongodb';
+import User from '@/models/user.model';
 
-interface DecodedToken {
-  userId: string;
-  iat: number;
-  exp: number;
+// Function to get token from Authorization header
+export function getToken(req: NextRequest): string | null {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  return authHeader.split(' ')[1];
 }
 
-export async function authenticate(request: NextRequest) {
+// Verify JWT token
+export function verifyToken(token: string) {
   try {
-    // Connect to database
+    return jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+  } catch (error) {
+    return null;
+  }
+}
+
+// Authenticate user middleware
+export async function authenticate(req: NextRequest) {
+  const token = getToken(req);
+  if (!token) {
+    return null;
+  }
+  
+  const decoded = verifyToken(token);
+  if (!decoded || typeof decoded !== 'object') {
+    return null;
+  }
+  
+  try {
     await connectToDatabase();
-    
-    // Check for token in headers
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { message: 'Authentication required' }, 
-        { status: 401 }
-      );
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) {
+      return null;
     }
     
-    // Extract token
-    const token = authHeader.split(' ')[1];
-    if (!token) {
-      return NextResponse.json(
-        { message: 'Authentication required' }, 
-        { status: 401 }
-      );
-    }
-    
-    try {
-      // Verify token
-      const decoded = jwt.verify(
-        token, 
-        process.env.JWT_SECRET as string
-      ) as DecodedToken;
-      
-      // Find user from token
-      const user = await User.findById(decoded.userId);
-      if (!user) {
-        return NextResponse.json(
-          { message: 'Invalid token' }, 
-          { status: 401 }
-        );
-      }
-      
-      // Return success with user
-      return { status: 200, user };
-    } catch (error) {
-      return NextResponse.json(
-        { message: 'Invalid token' }, 
-        { status: 401 }
-      );
-    }
+    return {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phoneNumber: user.phoneNumber || undefined,
+      avatar: user.avatar || undefined,
+      address: user.address || undefined
+    };
   } catch (error) {
-    return NextResponse.json(
-      { message: 'Server error' }, 
-      { status: 500 }
-    );
+    console.error('Authentication error:', error);
+    return null;
   }
 }
 
-export async function isAdmin(request: NextRequest, user: IUser) {
-  try {
-    if (!user) {
-      return NextResponse.json(
-        { message: 'Authentication required' }, 
-        { status: 401 }
-      );
-    }
-    
-    if (user.role !== 'admin') {
-      return NextResponse.json(
-        { message: 'Access denied. Admin only.' }, 
-        { status: 403 }
-      );
-    }
-    
-    // Return success
-    return { status: 200 };
-  } catch (error) {
-    return NextResponse.json(
-      { message: 'Server error' }, 
-      { status: 500 }
-    );
-  }
+// Check if user is admin
+export function isAdmin(user: any) {
+  return user?.role === 'admin';
 }
