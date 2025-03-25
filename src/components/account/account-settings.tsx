@@ -1,202 +1,143 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { EyeOff, Eye, Bell, BellOff, LogOut } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import { useToast } from "@/components/ui/use-toast"
-import { Separator } from "@/components/ui/separator"
-import { useRouter } from "next/navigation"
+import { useState } from "react";
+import { LogOut, Trash2, AlertTriangle } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/components/ui/use-toast";
+import { Separator } from "@/components/ui/separator";
+import { useRouter } from "next/navigation";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export function AccountSettings() {
-  const { user, logout } = useAuth()
-  const { toast } = useToast()
-  const router = useRouter()
-  
-  // Password change state
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  })
-  
-  // Show/hide password fields
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
-  const [showNewPassword, setShowNewPassword] = useState(false)
-  
+  const { user, logout } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Notification preferences
   const [notificationPrefs, setNotificationPrefs] = useState({
     orderUpdates: true,
     promotions: true,
     newArrivals: false,
     blogPosts: false,
-  })
-  
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setPasswordData(prev => ({ ...prev, [name]: value }))
-  }
-  
-  const handlePasswordSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    // Simple validation
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "New password and confirmation must match",
-        variant: "destructive",
-      })
-      return
-    }
-    
-    // Password change logic would go here
-    // For now, we'll just show a success message
-    toast({
-      title: "Password updated",
-      description: "Your password has been updated successfully",
-    })
-    
-    // Reset form
-    setPasswordData({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    })
-  }
-  
+  });
+
   const handleToggleNotification = (key: keyof typeof notificationPrefs) => {
-    setNotificationPrefs(prev => ({
+    setNotificationPrefs((prev) => ({
       ...prev,
-      [key]: !prev[key]
-    }))
-    
+      [key]: !prev[key],
+    }));
+
     toast({
       title: "Preferences updated",
       description: "Your notification preferences have been saved",
-    })
-  }
-  
+    });
+  };
+
   const handleSignOut = () => {
-    logout()
+    logout();
     toast({
       title: "Signed out",
       description: "You have been signed out successfully",
-    })
-    router.push("/")
-  }
-  
-  const handleDeleteAccount = () => {
-    // This would typically show a confirmation dialog
-    if (confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+    });
+    router.push("/");
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      setIsDeleting(true);
+
+      // Get the auth token from localStorage
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        throw new Error("Not authenticated");
+      }
+
+      // Call the delete account API
+      const response = await fetch("/api/user/delete-account", {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to delete account");
+      }
+
       toast({
         title: "Account deleted",
-        description: "Your account has been deleted successfully",
-      })
-      
-      // Log the user out
+        description: "Your account has been permanently deleted",
+      });
+
+      // Log the user out and redirect to home page
       setTimeout(() => {
-        logout()
-      }, 2000)
+        logout();
+        router.push("/");
+      }, 1500);
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to delete your account",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
-  }
-  
+  };
+
   return (
     <div className="grid gap-6">
-      {/* Password Change */}
+      {/* Google Account Info */}
       <Card>
         <CardHeader>
-          <CardTitle>Change Password</CardTitle>
-          <CardDescription>Update your password to keep your account secure</CardDescription>
+          <CardTitle>Google Account</CardTitle>
+          <CardDescription>Your account is linked with Google</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handlePasswordSubmit} className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="currentPassword">Current Password</Label>
-              <div className="relative">
-                <Input
-                  id="currentPassword"
-                  name="currentPassword"
-                  type={showCurrentPassword ? "text" : "password"}
-                  placeholder="Enter your current password"
-                  value={passwordData.currentPassword}
-                  onChange={handlePasswordChange}
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                >
-                  {showCurrentPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                  <span className="sr-only">
-                    {showCurrentPassword ? "Hide password" : "Show password"}
-                  </span>
-                </Button>
-              </div>
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="newPassword">New Password</Label>
-              <div className="relative">
-                <Input
-                  id="newPassword"
-                  name="newPassword"
-                  type={showNewPassword ? "text" : "password"}
-                  placeholder="Enter your new password"
-                  value={passwordData.newPassword}
-                  onChange={handlePasswordChange}
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                >
-                  {showNewPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                  <span className="sr-only">
-                    {showNewPassword ? "Hide password" : "Show password"}
-                  </span>
-                </Button>
-              </div>
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                placeholder="Confirm your new password"
-                value={passwordData.confirmPassword}
-                onChange={handlePasswordChange}
-                required
+          <div className="flex items-center gap-4">
+            {user?.avatar && (
+              <img
+                src={user.avatar}
+                alt={user?.name || "User"}
+                className="w-16 h-16 rounded-full"
               />
+            )}
+            <div className="space-y-1">
+              <p className="font-medium">{user?.name}</p>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
             </div>
-            
-            <div className="flex justify-end">
-              <Button type="submit">Update Password</Button>
-            </div>
-          </form>
+          </div>
         </CardContent>
       </Card>
-      
+
       {/* Notification Preferences */}
       <Card>
         <CardHeader>
@@ -259,19 +200,21 @@ export function AccountSettings() {
           </div>
         </CardContent>
       </Card>
-      
+
       {/* Sign Out Option */}
       <Card>
         <CardHeader>
           <CardTitle>Sign Out</CardTitle>
-          <CardDescription>Sign out of your account on this device</CardDescription>
+          <CardDescription>
+            Sign out of your account on this device
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            You will need to sign in with your credentials again next time you visit.
+            You will need to sign in with Google again next time you visit.
           </p>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={handleSignOut}
             className="flex items-center gap-2"
           >
@@ -280,26 +223,51 @@ export function AccountSettings() {
           </Button>
         </CardContent>
       </Card>
-      
+
       {/* Delete Account */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Danger Zone</CardTitle>
+      <Card className="border-destructive/20">
+        <CardHeader className="text-destructive">
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5" />
+            Danger Zone
+          </CardTitle>
           <CardDescription>Irreversible account actions</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Once you delete your account, all your data will be permanently removed.
-            This action cannot be undone.
+            Once you delete your account, all your data will be permanently
+            removed. This action cannot be undone.
           </p>
-          <Button
-            variant="destructive"
-            onClick={handleDeleteAccount}
-          >
-            Delete Account
-          </Button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="flex items-center gap-2">
+                <Trash2 className="h-4 w-4" />
+                Delete Account
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action will permanently delete your account and all
+                  associated data. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteAccount}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? "Deleting..." : "Delete Account"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
