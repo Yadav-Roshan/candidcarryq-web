@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { useCart } from "@/contexts/cart-context"
-import { Product } from "@/contexts/cart-context"
-import { Minus, Plus, ShoppingBag } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
-import { cn } from "@/lib/utils"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useCart } from "@/contexts/cart-context";
+import { Product } from "@/contexts/cart-context";
+import { Minus, Plus, ShoppingBag } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
 
 interface AddToCartButtonProps {
-  product: Product
-  className?: string
-  showQuantity?: boolean
+  product: Product;
+  className?: string;
+  showQuantity?: boolean;
 }
 
 export default function AddToCartButton({
@@ -19,24 +19,24 @@ export default function AddToCartButton({
   className,
   showQuantity = true,
 }: AddToCartButtonProps) {
-  const [quantity, setQuantity] = useState(1)
-  const { addToCart } = useCart()
-  const { toast } = useToast()
+  const [quantity, setQuantity] = useState(1);
+  const { addToCart } = useCart();
+  const { toast } = useToast();
 
-  const increment = () => setQuantity(prev => prev + 1)
-  const decrement = () => setQuantity(prev => Math.max(1, prev - 1))
+  const increment = () => setQuantity((prev) => prev + 1);
+  const decrement = () => setQuantity((prev) => Math.max(1, prev - 1));
 
   const handleAddToCart = () => {
-    addToCart(product, quantity)
-    
+    addToCart(product, quantity);
+
     toast({
       title: "Added to cart",
       description: `${product.name} × ${quantity} added to your cart`,
-    })
-    
+    });
+
     // Reset quantity to 1 after adding to cart
-    setQuantity(1)
-  }
+    setQuantity(1);
+  };
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
@@ -64,9 +64,9 @@ export default function AddToCartButton({
           </Button>
         </div>
       )}
-      
-      <Button 
-        onClick={handleAddToCart} 
+
+      <Button
+        onClick={handleAddToCart}
         className="w-full"
         size={showQuantity ? "default" : "sm"}
       >
@@ -74,5 +74,5 @@ export default function AddToCartButton({
         Add to Cart
       </Button>
     </div>
-  )
+  );
 }

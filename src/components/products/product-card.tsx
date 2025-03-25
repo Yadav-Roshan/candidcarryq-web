@@ -1,26 +1,26 @@
-"use client"
+"use client";
 
-import React from "react"
-import Link from "next/link"
-import { Heart, ShoppingCart, Star, StarHalf, Eye } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { cn, formatPrice } from "@/lib/utils"
-import { useWishlist } from "@/contexts/wishlist-context"
-import { useCart } from "@/contexts/cart-context"
-import { useToast } from "@/components/ui/use-toast"
+import React from "react";
+import Link from "next/link";
+import { Heart, ShoppingCart, Star, StarHalf, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn, formatPrice } from "@/lib/utils";
+import { useWishlist } from "@/contexts/wishlist-context";
+import { useCart } from "@/contexts/cart-context";
+import { useToast } from "@/components/ui/use-toast";
 
 export interface ProductCardProps {
-  id: string
-  name: string
-  price: number
-  category?: string
-  image?: string
-  salePrice?: number
-  rating?: number
-  reviewCount?: number
-  stock?: number
-  description?: string
+  id: string;
+  name: string;
+  price: number;
+  category?: string;
+  image?: string;
+  salePrice?: number;
+  rating?: number;
+  reviewCount?: number;
+  stock?: number;
+  description?: string;
 }
 
 export function ProductCard({
@@ -35,89 +35,110 @@ export function ProductCard({
   stock = 0,
   description,
 }: ProductCardProps) {
-  const { addItem: addToWishlist, removeItem: removeFromWishlist, isItemInWishlist } = useWishlist()
-  const { addItem: addToCart } = useCart()
-  const { toast } = useToast()
-  const isWishlisted = isItemInWishlist(id)
-  
-  const discountPercentage = salePrice ? Math.round(((price - salePrice) / price) * 100) : 0
-  
+  const {
+    addItem: addToWishlist,
+    removeItem: removeFromWishlist,
+    isItemInWishlist,
+  } = useWishlist();
+  const { addToCart } = useCart();
+  const { toast } = useToast();
+  const isWishlisted = isItemInWishlist(id);
+
+  const discountPercentage = salePrice
+    ? Math.round(((price - salePrice) / price) * 100)
+    : 0;
+
   const handleWishlistToggle = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
+    e.preventDefault();
+    e.stopPropagation();
+
     if (isWishlisted) {
-      removeFromWishlist(id)
+      removeFromWishlist(id);
       toast({
         title: "Removed from wishlist",
         description: `${name} has been removed from your wishlist`,
-      })
+      });
     } else {
-      addToWishlist({ 
-        id, 
-        name, 
-        price, 
-        image, 
-        category, 
-        salePrice
-      })
+      addToWishlist({
+        id,
+        name,
+        price,
+        image,
+        category,
+        salePrice,
+      });
       toast({
         title: "Added to wishlist",
         description: `${name} has been added to your wishlist`,
-      })
+      });
     }
-  }
-  
+  };
+
   const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    addToCart({ 
-      id, 
-      name, 
-      price: salePrice || price, 
+    e.preventDefault();
+    e.stopPropagation();
+
+    addToCart({
+      id,
+      name,
+      price: salePrice || price,
       image,
       quantity: 1,
-    })
-    
+    });
+
     toast({
       title: "Added to cart",
       description: `${name} has been added to your cart`,
-    })
-  }
-  
+    });
+  };
+
   const handleNavigate = (e: React.MouseEvent, path: string) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
+    e.preventDefault();
+    e.stopPropagation();
+
     // Use router or window.location to navigate
-    window.location.href = path
-  }
-  
+    window.location.href = path;
+  };
+
   const renderRatingStars = (rating: number) => {
     const stars = [];
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
-    
+
     // Add full stars
     for (let i = 0; i < fullStars; i++) {
-      stars.push(<Star key={`star-${i}`} className="h-4 w-4 fill-yellow-400 text-yellow-400" />);
+      stars.push(
+        <Star
+          key={`star-${i}`}
+          className="h-4 w-4 fill-yellow-400 text-yellow-400"
+        />
+      );
     }
-    
+
     // Add half star if needed
     if (hasHalfStar) {
-      stars.push(<StarHalf key="half-star" className="h-4 w-4 fill-yellow-400 text-yellow-400" />);
+      stars.push(
+        <StarHalf
+          key="half-star"
+          className="h-4 w-4 fill-yellow-400 text-yellow-400"
+        />
+      );
     }
-    
+
     // Add empty stars
     const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
     for (let i = 0; i < emptyStars; i++) {
-      stars.push(<Star key={`empty-star-${i}`} className="h-4 w-4 text-muted-foreground" />);
+      stars.push(
+        <Star
+          key={`empty-star-${i}`}
+          className="h-4 w-4 text-muted-foreground"
+        />
+      );
     }
-    
+
     return stars;
   };
-  
+
   return (
     <div className="group relative overflow-hidden rounded-lg border bg-background shadow-sm transition-colors hover:shadow-md">
       {/* Wishlist button */}
@@ -135,9 +156,12 @@ export function ProductCard({
           {isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
         </span>
       </Button>
-      
+
       {/* Product content - now using a div instead of a Link */}
-      <div className="flex flex-col" onClick={(e) => handleNavigate(e, `/products/${id}`)}>
+      <div
+        className="flex flex-col"
+        onClick={(e) => handleNavigate(e, `/products/${id}`)}
+      >
         {/* Product image */}
         <div className="relative aspect-square overflow-hidden rounded-t-lg bg-muted cursor-pointer">
           <img
@@ -145,30 +169,28 @@ export function ProductCard({
             alt={name}
             className="h-full w-full object-cover transition-transform group-hover:scale-105"
           />
-          
+
           {salePrice && (
             <Badge className="absolute left-2 top-2 bg-red-500 text-white">
               {discountPercentage}% OFF
             </Badge>
           )}
         </div>
-        
+
         {/* Product info */}
         <div className="flex flex-1 flex-col p-4">
           <h3 className="font-medium truncate cursor-pointer">{name}</h3>
-          
+
           {category && (
             <p className="text-xs text-muted-foreground capitalize">
               {category}
             </p>
           )}
-          
+
           {/* Rating stars */}
           {rating > 0 && (
             <div className="mt-2 flex items-center">
-              <div className="flex">
-                {renderRatingStars(rating)}
-              </div>
+              <div className="flex">{renderRatingStars(rating)}</div>
               {reviewCount > 0 && (
                 <span className="ml-2 text-xs text-muted-foreground">
                   ({reviewCount})
@@ -176,7 +198,7 @@ export function ProductCard({
               )}
             </div>
           )}
-          
+
           <div className="mt-4 flex items-center">
             {salePrice ? (
               <>
@@ -191,10 +213,10 @@ export function ProductCard({
               <p className="font-medium">{formatPrice(price)}</p>
             )}
           </div>
-          
+
           {/* Action buttons container - shown on hover or focus */}
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <Button 
+            <Button
               variant="outline"
               size="sm"
               className="w-full"
@@ -202,8 +224,8 @@ export function ProductCard({
             >
               <Eye className="mr-1 h-3 w-3" /> View
             </Button>
-            
-            <Button 
+
+            <Button
               variant="default"
               size="sm"
               className="w-full"
@@ -212,7 +234,7 @@ export function ProductCard({
             >
               <ShoppingCart className="mr-1 h-3 w-3" /> Cart
             </Button>
-            
+
             {stock === 0 && (
               <div className="col-span-2 mt-2 text-center text-xs text-destructive">
                 Out of stock
@@ -222,5 +244,5 @@ export function ProductCard({
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -3,68 +3,63 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
+import { Eye, EyeOff } from "lucide-react"
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
-  confirmPassword: z.string(),
-  termsAccepted: z.boolean().refine(val => val === true, {
-    message: "You must accept the terms and conditions"
-  }),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+  confirmPassword: z.string()
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"]
 })
 
+type FormValues = z.infer<typeof formSchema>
+
 export default function SignupPage() {
-  const { signup } = useAuth()
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [showPassword, setShowPassword] = useState<boolean>(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false)
   const router = useRouter()
   const { toast } = useToast()
-  
-  const form = useForm<z.infer<typeof formSchema>>({
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       email: "",
       password: "",
-      confirmPassword: "",
-      termsAccepted: false,
-    },
+      confirmPassword: ""
+    }
   })
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(data: FormValues) {
     setIsLoading(true)
-    
+
     try {
-      await signup(values.name, values.email, values.password)
+      // Simulating API call delay
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      
+      // Simulate successful registration
       toast({
-        title: "Account created successfully",
-        description: "Welcome to CandidWear! You're now signed in.",
+        title: "Account created",
+        description: "Your account has been created successfully!"
       })
-      router.push("/")
-    } catch (err) {
+      
+      router.push("/login")
+    } catch (error) {
       toast({
-        title: "Sign up failed",
-        description: "Something went wrong. Please try again.",
         variant: "destructive",
+        title: "Registration failed",
+        description: "There was a problem creating your account."
       })
     } finally {
       setIsLoading(false)
@@ -72,130 +67,129 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="container mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-4 py-8">
-      <div className="w-full space-y-6 rounded-lg border bg-card p-6 shadow-md">
-        <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold">Create an Account</h1>
-          <p className="text-muted-foreground">Sign up to start shopping premium bags</p>
-        </div>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="John Doe" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+    <div className="flex items-center justify-center min-h-[80vh] py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">Create an account</CardTitle>
+          <CardDescription className="text-center">
+            Enter your information to create an account
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none" htmlFor="name">
+                Full Name
+              </label>
+              <Input
+                id="name"
+                placeholder="John Doe"
+                disabled={isLoading}
+                {...form.register("name")}
+              />
+              {form.formState.errors.name && (
+                <p className="text-sm font-medium text-destructive">{form.formState.errors.name.message}</p>
               )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="email@example.com" type="email" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none" htmlFor="email">
+                Email
+              </label>
+              <Input
+                id="email"
+                placeholder="name@example.com"
+                type="email"
+                autoCapitalize="none"
+                autoComplete="email"
+                autoCorrect="off"
+                disabled={isLoading}
+                {...form.register("email")}
+              />
+              {form.formState.errors.email && (
+                <p className="text-sm font-medium text-destructive">{form.formState.errors.email.message}</p>
               )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="********" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none" htmlFor="password">
+                Password
+              </label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  placeholder="••••••••"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  disabled={isLoading}
+                  {...form.register("password")}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  <span className="sr-only">Toggle password visibility</span>
+                </Button>
+              </div>
+              {form.formState.errors.password && (
+                <p className="text-sm font-medium text-destructive">{form.formState.errors.password.message}</p>
               )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="********" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none" htmlFor="confirmPassword">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  placeholder="••••••••"
+                  type={showConfirmPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  disabled={isLoading}
+                  {...form.register("confirmPassword")}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  <span className="sr-only">Toggle confirm password visibility</span>
+                </Button>
+              </div>
+              {form.formState.errors.confirmPassword && (
+                <p className="text-sm font-medium text-destructive">{form.formState.errors.confirmPassword.message}</p>
               )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="termsAccepted"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox 
-                      checked={field.value} 
-                      onCheckedChange={field.onChange} 
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      I agree to the{" "}
-                      <Link href="/terms" className="text-primary hover:underline">
-                        Terms of Service
-                      </Link>{" "}
-                      and{" "}
-                      <Link href="/privacy" className="text-primary hover:underline">
-                        Privacy Policy
-                      </Link>
-                    </FormLabel>
-                    <FormMessage />
-                  </div>
-                </FormItem>
-              )}
-            />
-            
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="terms"
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                required
+              />
+              <label htmlFor="terms" className="text-sm text-muted-foreground">
+                I agree to the <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+              </label>
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Button className="w-full" type="submit" disabled={isLoading}>
               {isLoading ? "Creating account..." : "Create account"}
             </Button>
-          </form>
-        </Form>
-
-        <div className="relative flex items-center justify-center">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <span className="relative bg-background px-2 text-xs text-muted-foreground">
-            OR CONTINUE WITH
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Button variant="outline" type="button" disabled={isLoading}>
-            Google
-          </Button>
-          <Button variant="outline" type="button" disabled={isLoading}>
-            Facebook
-          </Button>
-        </div>
-
-        <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link href="/login" className="font-medium text-primary hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </div>
+            <p className="text-sm text-center text-muted-foreground">
+              Already have an account?{" "}
+              <Link href="/login" className="font-medium text-primary hover:underline">
+                Sign in
+              </Link>
+            </p>
+          </CardFooter>
+        </form>
+      </Card>
     </div>
   )
 }

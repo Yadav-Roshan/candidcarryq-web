@@ -1,23 +1,25 @@
-import { Button } from '@/components/ui/button'
-import ProductGrid from '@/components/products/product-grid'
-import { getFeaturedProducts } from '@/lib/api'
-import Link from 'next/link'
-import CategoryShowcase from '@/components/products/category-showcase'
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
+import { TrustIndicators } from "@/components/home/trust-indicators"
+import { NewsletterSubscription } from "@/components/home/newsletter"
+import { ProductCard } from "@/components/products/product-card"
+import { getFeaturedProducts } from "@/lib/api" // Server-side function 
 
 export default async function Home() {
+  // This will run only on the server
   const featuredProducts = await getFeaturedProducts()
-
+  
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Hero section */}
-      <section className="relative py-20">
-        <div className="bg-muted/50 absolute inset-0 -z-10 rounded-lg"></div>
-        <div className="mx-auto max-w-3xl text-center">
-          <h1 className="mb-6 text-4xl font-bold sm:text-5xl md:text-6xl">Premium Bags for Every Occasion</h1>
-          <p className="mb-8 text-xl text-muted-foreground">
-            Discover our collection of high-quality, stylish bags designed to elevate your everyday look.
+    <div className="flex flex-col">
+      {/* Hero Section */}
+      <section className="py-16 md:py-24 bg-slate-100 dark:bg-slate-900">
+        <div className="container flex flex-col items-center text-center">
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">Premium Bags for Every Style</h1>
+          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl">
+            Discover our exquisite collection of handbags, backpacks, and travel bags designed for your lifestyle.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <Button size="lg" asChild>
               <Link href="/products">Shop Now</Link>
             </Button>
@@ -28,43 +30,77 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Featured products section */}
-      <section className="py-16">
-        <div className="mb-8 flex items-center justify-between">
-          <h2 className="text-3xl font-bold">Featured Products</h2>
-          <Button variant="outline" asChild>
-            <Link href="/products">View All</Link>
-          </Button>
+      {/* Featured Products */}
+      <section className="py-16 bg-primary/5">
+        <div className="container">
+          <div className="text-center pb-6">
+            <h2 className="text-3xl font-bold">Featured Products</h2>
+          </div>
+          
+          <div className="h-12"></div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featuredProducts.map((product) => (
+              <ProductCard key={product.id} {...product} />
+            ))}
+          </div>
+          
+          <div className="mt-16 text-center">
+            <Button asChild variant="outline">
+              <Link href="/products" className="flex items-center">
+                View All Products <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
-        <ProductGrid products={featuredProducts} />
       </section>
 
       {/* Categories section */}
-      <section className="py-16">
-        <h2 className="mb-8 text-3xl font-bold">Shop by Category</h2>
-        <CategoryShowcase categories={[]} />
-      </section>
-
-      {/* Newsletter signup */}
-      <section className="rounded-lg bg-muted/50 px-8 py-16">
-        <div className="mx-auto max-w-xl text-center">
-          <h2 className="mb-4 text-2xl font-bold">Join Our Newsletter</h2>
-          <p className="mb-6 text-muted-foreground">
-            Subscribe to get special offers, free giveaways, and once-in-a-lifetime deals.
-          </p>
-          <form className="flex flex-col items-center gap-4 sm:flex-row">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="w-full rounded-md border border-input bg-background px-3 py-2"
-              required
-            />
-            <Button type="submit" className="w-full sm:w-auto">
-              Subscribe
-            </Button>
-          </form>
+      <section className="py-16 bg-blue-50 dark:bg-slate-800">
+        <div className="container">
+          <div className="text-center pb-6">
+            <h2 className="text-3xl font-bold">Shop by Category</h2>
+          </div>
+          
+          <div className="h-12"></div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="relative overflow-hidden rounded-lg bg-background shadow-md hover:shadow-lg transition-shadow">
+              <div className="p-6 text-center">
+                <h3 className="text-xl font-semibold mb-4">Backpacks</h3>
+                <p className="text-muted-foreground mb-4">Practical and stylish backpacks for everyday use.</p>
+                <Button asChild>
+                  <Link href="/products?category=backpacks">View Collection</Link>
+                </Button>
+              </div>
+            </div>
+            <div className="relative overflow-hidden rounded-lg bg-background shadow-md hover:shadow-lg transition-shadow">
+              <div className="p-6 text-center">
+                <h3 className="text-xl font-semibold mb-4">Handbags</h3>
+                <p className="text-muted-foreground mb-4">Elegant handbags to complement any outfit.</p>
+                <Button asChild>
+                  <Link href="/products?category=handbags">View Collection</Link>
+                </Button>
+              </div>
+            </div>
+            <div className="relative overflow-hidden rounded-lg bg-background shadow-md hover:shadow-lg transition-shadow">
+              <div className="p-6 text-center">
+                <h3 className="text-xl font-semibold mb-4">Travel Bags</h3>
+                <p className="text-muted-foreground mb-4">Durable and spacious bags for your journeys.</p>
+                <Button asChild>
+                  <Link href="/products?category=travel">View Collection</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
+      
+      {/* Trust Indicators */}
+      <TrustIndicators />
+      
+      {/* Newsletter */}
+      <NewsletterSubscription />
     </div>
   )
 }
