@@ -1,35 +1,13 @@
 "use client";
 
-import { Heart, ShoppingBag, Trash2 } from "lucide-react";
+import { Heart } from "lucide-react";
 import { useWishlist } from "@/contexts/wishlist-context";
-import { useCart } from "@/contexts/cart-context";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { formatPrice } from "@/lib/utils";
+import { ProductCard } from "@/components/products/product-card";
 import Link from "next/link";
-import Image from "next/image";
 
 export default function WishlistContent() {
-  const {
-    items,
-    removeItem: removeFromWishlist,
-    clearWishlist,
-    isItemInWishlist,
-  } = useWishlist();
-  const { addToCart } = useCart();
-  const { toast } = useToast();
-
-  const handleAddToCart = (productId: string) => {
-    const product = items.find((item) => item.id === productId);
-    if (product) {
-      addToCart(product);
-      toast({
-        title: "Added to cart",
-        description: `${product.name} has been added to your cart`,
-        duration: 2000,
-      });
-    }
-  };
+  const { items, clearWishlist } = useWishlist();
 
   if (items.length === 0) {
     return (
@@ -63,82 +41,21 @@ export default function WishlistContent() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="relative group rounded-lg border bg-background p-2"
-          >
-            <div className="flex gap-4">
-              {/* Product image */}
-              <div className="w-24 h-24 relative rounded-md overflow-hidden flex-shrink-0">
-                {item.image ? (
-                  <Image
-                    src={item.image}
-                    alt={item.name}
-                    fill
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="h-full w-full bg-muted flex items-center justify-center">
-                    <ShoppingBag className="h-6 w-6 text-muted-foreground/40" />
-                  </div>
-                )}
-              </div>
-
-              {/* Product details */}
-              <div className="flex-1">
-                <Link
-                  href={`/products/${item.id}`}
-                  className="text-lg font-medium hover:underline line-clamp-1"
-                >
-                  {item.name}
-                </Link>
-
-                {item.category && (
-                  <p className="text-xs text-muted-foreground capitalize mt-1">
-                    {item.category}
-                  </p>
-                )}
-
-                <div className="mt-2 mb-3">
-                  {item.salePrice ? (
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">
-                        {formatPrice(item.salePrice)}
-                      </span>
-                      <span className="text-xs text-muted-foreground line-through">
-                        {formatPrice(item.price)}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="font-medium">
-                      {formatPrice(item.price)}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    className="w-full"
-                    onClick={() => handleAddToCart(item.id)}
-                  >
-                    Add to Cart
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="flex-shrink-0 text-muted-foreground hover:text-destructive"
-                    onClick={() => removeFromWishlist(item.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Remove</span>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {items.map((product) => (
+          <ProductCard
+            key={product.id}
+            id={product.id}
+            name={product.name}
+            price={product.price}
+            image={product.image}
+            category={product.category}
+            salePrice={product.salePrice}
+            rating={product.rating || 0}
+            reviewCount={product.reviewCount || 0}
+            stock={product.stock || 0}
+            description={product.description || ""}
+          />
         ))}
       </div>
     </div>

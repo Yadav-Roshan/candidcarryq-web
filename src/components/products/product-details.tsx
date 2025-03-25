@@ -165,6 +165,27 @@ export function ProductDetails({ product }: ProductDetailsProps) {
     return stars;
   };
 
+  // Function to get at least 3 images
+  const getProductImages = () => {
+    // Start with the main product image
+    const allImages = [product.image];
+
+    // Add additional images if they exist
+    if (product.images && product.images.length > 0) {
+      allImages.push(...product.images);
+    }
+
+    // If we still have fewer than 3 images, add placeholders
+    const placeholderCount = Math.max(0, 3 - allImages.length);
+    for (let i = 0; i < placeholderCount; i++) {
+      allImages.push(`https://placehold.co/600x600?text=No+Image+${i + 1}`);
+    }
+
+    return allImages;
+  };
+
+  const allProductImages = getProductImages();
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-16">
       {/* Product Images */}
@@ -183,39 +204,24 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           )}
         </div>
 
-        {/* Image thumbnails */}
-        {product.images && product.images.length > 0 && (
-          <div className="flex space-x-2 overflow-x-auto pb-2">
+        {/* Image thumbnails - Updated to always show at least 3 */}
+        <div className="flex space-x-2 overflow-x-auto pb-2">
+          {allProductImages.map((img, index) => (
             <button
+              key={index}
               className={`relative rounded border overflow-hidden w-20 h-20 flex-shrink-0 ${
-                selectedImage === product.image ? "ring-2 ring-primary" : ""
+                selectedImage === img ? "ring-2 ring-primary" : ""
               }`}
-              onClick={() => setSelectedImage(product.image)}
+              onClick={() => setSelectedImage(img)}
             >
               <img
-                src={product.image}
-                alt="Main"
+                src={img}
+                alt={`Thumbnail ${index + 1}`}
                 className="w-full h-full object-cover"
               />
             </button>
-
-            {product.images.map((img, index) => (
-              <button
-                key={index}
-                className={`relative rounded border overflow-hidden w-20 h-20 flex-shrink-0 ${
-                  selectedImage === img ? "ring-2 ring-primary" : ""
-                }`}
-                onClick={() => setSelectedImage(img)}
-              >
-                <img
-                  src={img}
-                  alt={`Thumbnail ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              </button>
-            ))}
-          </div>
-        )}
+          ))}
+        </div>
       </div>
 
       {/* Product Info */}
