@@ -311,13 +311,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Logout function
   const logout = () => {
-    // Cancel Google auth first if available
-    if (window.google?.accounts?.id) {
-      try {
+    // First try to clear Google's authentication state
+    try {
+      if (window.google?.accounts?.id) {
+        // Cancel any current Google auth session
         window.google.accounts.id.cancel();
-      } catch (e) {
-        console.log("No active Google session to cancel");
+        // Disable auto-select to prevent automatic re-login
+        window.google.accounts.id.disableAutoSelect();
+        console.log("Google auth state cleared");
       }
+    } catch (e) {
+      console.log("Error clearing Google auth state:", e);
     }
 
     // Clear token
@@ -326,8 +330,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear user state
     setUser(null);
 
-    // Set loading to false immediately to avoid the "checking authentication" state
-    setIsLoading(false);
+    // Force page refresh to clear all client-side state
+    // This is the most reliable way to reset Google auth completely
+    setTimeout(() => {
+      window.location.href = "/login?refresh=true";
+    }, 100);
 
     // Show toast notification
     toast({

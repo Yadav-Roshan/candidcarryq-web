@@ -37,6 +37,27 @@ export default function LoginPage() {
     }
   }, [errorParam]);
 
+  // Reset Google auth state when navigating to login page
+  useEffect(() => {
+    // Get our URL parameters
+    const refreshParam = searchParams.get("refresh");
+
+    // If the user just logged out (indicated by the refresh parameter)
+    // we don't need to do anything as the page refresh handled the reset
+    if (refreshParam !== "true") {
+      // Otherwise, try to explicitly reset Google auth state
+      if (window.google?.accounts?.id) {
+        try {
+          window.google.accounts.id.cancel();
+          window.google.accounts.id.disableAutoSelect();
+          console.log("Google auth state reset on login page load");
+        } catch (e) {
+          console.log("Error resetting Google auth:", e);
+        }
+      }
+    }
+  }, [searchParams]);
+
   // If authentication is in progress, show a loading state
   if (isLoading) {
     return (

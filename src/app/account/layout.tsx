@@ -1,8 +1,18 @@
-"use client"
+import { Metadata } from "next";
+import { AccountLayoutClient } from "@/components/account/account-layout-client";
 
-import { ReactNode } from "react"
-import { AccountAuthCheck } from "@/components/account/account-auth-check"
+// Metadata can be exported from server components
+export const metadata: Metadata = {
+  title: "My Account - CandidWear",
+  description: "Manage your account settings and view your orders",
+};
 
-export default function AccountLayout({ children }: { children: ReactNode }) {
-  return <AccountAuthCheck>{children}</AccountAuthCheck>
+// The root layout starts as a server component
+export default function AccountLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // But we delegate the client-side functionality to a client component
+  return <AccountLayoutClient>{children}</AccountLayoutClient>;
 }
