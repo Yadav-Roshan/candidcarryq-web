@@ -1,105 +1,217 @@
-"use client"
+"use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { useAuth } from "./auth-context";
+import { useToast } from "@/components/ui/use-toast";
 
 export interface WishlistItem {
-  id: string
-  name: string
-  price: number
-  image?: string
-  category?: string
-  salePrice?: number
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  category?: string;
+  salePrice?: number;
 }
 
 interface WishlistContextType {
-  items: WishlistItem[]
-  totalItems: number
-  addItem: (item: WishlistItem) => void
-  removeItem: (id: string) => void
-  clearWishlist: () => void
-  isItemInWishlist: (id: string) => boolean
+  wishlistItems: WishlistItem[];
+  addItem: (item: WishlistItem) => void;
+  removeItem: (productId: string) => void;
+  clearWishlist: () => void;
+  isItemInWishlist: (productId: string) => boolean;
+  isLoading: boolean;
 }
 
-const WishlistContext = createContext<WishlistContextType | undefined>(undefined)
+const WishlistContext = createContext<WishlistContextType | undefined>(
+  undefined
+);
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<WishlistItem[]>([])
-  const [mounted, setMounted] = useState(false)
-  
-  // Load wishlist from localStorage on component mount
+  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
+
+  // Load wishlist from server if logged in
   useEffect(() => {
-    setMounted(true)
-    const storedWishlist = localStorage.getItem('wishlist')
-    if (storedWishlist) {
+    const loadWishlist = async () => {
+      // Wait for auth to finish loading
+      if (authLoading) {
+        setIsLoading(true);
+        return;
+      }
+
       try {
-        setItems(JSON.parse(storedWishlist))
+        setIsLoading(true);
+
+        // If user is logged in, fetch from API
+        if (user) {
+          const token = localStorage.getItem("authToken");
+          if (!token) {
+            setWishlistItems([]);
+            return;
+          }
+
+          const response = await fetch("/api/user/wishlist", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setWishlistItems(data.wishlist || []);
+          } else {
+            // Handle error silently
+            setWishlistItems([]);
+          }
+        } else {
+          // If not logged in, always return empty wishlist
+          // Wishlist requires authentication
+          setWishlistItems([]);
+        }
       } catch (error) {
-        console.error('Error parsing wishlist data:', error)
-        setItems([])
+        console.error("Error loading wishlist:", error);
+        setWishlistItems([]);
+      } finally {
+        setIsLoading(false);
       }
+    };
+
+    loadWishlist();
+  }, [user, authLoading]);
+
+  const addItem = async (item: WishlistItem) => {
+    // Check if user is logged in
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to add items to your wishlist",
+        variant: "destructive",
+      });
+      return;
     }
-  }, [])
-  
-  // Save wishlist to localStorage whenever it changes
-  useEffect(() => {
-    if (mounted) {
-      localStorage.setItem('wishlist', JSON.stringify(items))
-    }
-  }, [items, mounted])
-  
-  // Get total items
-  const totalItems = items.length
-  
-  // Add item to wishlist
-  const addItem = (item: WishlistItem) => {
-    setItems(prev => {
-      const existingItem = prev.find(i => i.id === item.id)
-      
-      if (existingItem) {
-        // Item already exists, do nothing
-        return prev
-      } else {
-        // Item doesn't exist, add it
-        return [...prev, item]
+
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        toast({
+          title: "Authentication error",
+          description: "Please log in again",
+          variant: "destructive",
+        });
+        return;
       }
-    })
-  }
-  
-  // Remove item from wishlist
-  const removeItem = (id: string) => {
-    setItems(prev => prev.filter(item => item.id !== id))
-  }
-  
-  // Clear wishlist
+
+      // Optimistically update UI
+      setWishlistItems((prev) => [...prev, item]);
+
+      // Then update the server
+      const response = await fetch("/api/user/wishlist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ productId: item.id }),
+      });
+
+      // If server update failed, revert UI change
+      if (!response.ok) {
+        setWishlistItems((prev) => prev.filter((i) => i.id !== item.id));
+
+        const error = await response.json();
+        throw new Error(error.message || "Failed to add item to wishlist");
+      }
+    } catch (error) {
+      console.error("Error adding to wishlist:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add item to wishlist",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeItem = async (productId: string) => {
+    // Check if user is logged in
+    if (!user) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) return;
+
+      // Optimistically update UI
+      setWishlistItems((prev) => prev.filter((item) => item.id !== productId));
+
+      // Then update the server
+      const response = await fetch(
+        `/api/user/wishlist?productId=${productId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Handle any server errors silently
+      if (!response.ok) {
+        // Revert UI change
+        const item = wishlistItems.find((item) => item.id === productId);
+        if (item) {
+          setWishlistItems((prev) => [...prev, item]);
+        }
+
+        console.error("Error removing from wishlist:", await response.json());
+      }
+    } catch (error) {
+      console.error("Error removing from wishlist:", error);
+    }
+  };
+
   const clearWishlist = () => {
-    setItems([])
-  }
-  
-  // Check if item is in wishlist
-  const isItemInWishlist = (id: string) => {
-    return items.some(item => item.id === id)
-  }
-  
+    // Only allow clearing if user is authenticated
+    if (!user) return;
+
+    setWishlistItems([]);
+  };
+
+  const isItemInWishlist = (productId: string): boolean => {
+    // If user is not logged in, nothing is in wishlist
+    if (!user) return false;
+
+    return wishlistItems.some((item) => item.id === productId);
+  };
+
   return (
     <WishlistContext.Provider
       value={{
-        items,
-        totalItems,
+        wishlistItems,
         addItem,
         removeItem,
         clearWishlist,
-        isItemInWishlist
+        isItemInWishlist,
+        isLoading,
       }}
     >
       {children}
     </WishlistContext.Provider>
-  )
+  );
 }
 
 export const useWishlist = () => {
-  const context = useContext(WishlistContext)
+  const context = useContext(WishlistContext);
   if (context === undefined) {
-    throw new Error("useWishlist must be used within a WishlistProvider")
+    throw new Error("useWishlist must be used within a WishlistProvider");
   }
-  return context
-}
+  return context;
+};

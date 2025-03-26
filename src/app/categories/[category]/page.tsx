@@ -17,20 +17,20 @@ const validCategories = [
 export async function generateMetadata({
   params,
 }: {
-  params: { slug: string };
+  params: { category: string };
 }): Promise<Metadata> {
-  const { slug } = params;
-  const title = slug.charAt(0).toUpperCase() + slug.slice(1);
+  const { category } = params;
+  const title = category.charAt(0).toUpperCase() + category.slice(1);
 
   return {
     title: `${title} | CandidWear`,
-    description: `Browse our collection of premium ${slug}.`,
+    description: `Browse our collection of premium ${category}.`,
   };
 }
 
 export async function generateStaticParams() {
   return validCategories.map((category) => ({
-    slug: category,
+    category,
   }));
 }
 
@@ -38,7 +38,7 @@ export default async function CategoryPage({
   params,
   searchParams,
 }: {
-  params: { slug: string };
+  params: { category: string };
   searchParams?: {
     page?: string;
     limit?: string;
@@ -49,20 +49,20 @@ export default async function CategoryPage({
     materials?: string;
   };
 }) {
-  const { slug } = params;
+  const { category } = params;
 
   // Validate category
-  if (!validCategories.includes(slug)) {
+  if (!validCategories.includes(category)) {
     notFound();
   }
 
-  // Add category to search params and await properly
-  const queryParams = { ...searchParams, category: slug };
+  // Add category to search params
+  const queryParams = { ...searchParams, category };
 
   // Server-side fetch products
   const products = await getAllProducts(queryParams);
 
-  const categoryTitle = slug.charAt(0).toUpperCase() + slug.slice(1);
+  const categoryTitle = category.charAt(0).toUpperCase() + category.slice(1);
 
   return (
     <div className="container py-8">

@@ -1,7 +1,5 @@
 // Client-safe API utilities for fetching data without MongoDB imports
 
-import { mockProducts } from "./api-mock-data";
-
 // Client-side API for products
 export const productsApi = {
   // Get all products with optional filters
@@ -25,11 +23,11 @@ export const productsApi = {
       }
 
       const data = await response.json();
-      return data.products;
+      return data.products || [];
     } catch (error) {
       console.error("Error fetching products:", error);
-      // Fall back to mock data in case of error
-      return mockProducts;
+      // Return empty array instead of mock data
+      return [];
     }
   },
 
@@ -39,19 +37,14 @@ export const productsApi = {
       const response = await fetch(`/api/products/${id}`);
 
       if (!response.ok) {
-        // Check mock data as fallback
-        const mockProduct = mockProducts.find((p) => p.id === id);
-        if (mockProduct) return mockProduct;
-        throw new Error("Product not found");
+        return null;
       }
 
       const data = await response.json();
       return data.product;
     } catch (error) {
       console.error(`Error fetching product ${id}:`, error);
-      // Check mock data as fallback
-      const mockProduct = mockProducts.find((p) => p.id === id);
-      return mockProduct || null;
+      return null;
     }
   },
 
@@ -65,11 +58,10 @@ export const productsApi = {
       }
 
       const data = await response.json();
-      return data.products;
+      return data.products || [];
     } catch (error) {
       console.error("Error fetching featured products:", error);
-      // Return featured products from mock data
-      return mockProducts.filter((p) => p.isFeatured === true);
+      return [];
     }
   },
 };

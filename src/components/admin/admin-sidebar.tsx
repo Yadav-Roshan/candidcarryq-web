@@ -1,25 +1,23 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingBag, 
-  Users, 
-  Settings, 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingBag,
   LogOut,
   Star,
-  Megaphone
-} from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { useAuth } from "@/contexts/auth-context"
+  Megaphone,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/auth-context";
 
 interface SidebarItem {
-  title: string
-  icon: React.ComponentType<{ className?: string }>
-  href: string
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  href: string;
 }
 
 const sidebarItems: SidebarItem[] = [
@@ -44,26 +42,16 @@ const sidebarItems: SidebarItem[] = [
     href: "/admin/orders",
   },
   {
-    title: "Customers",
-    icon: Users,
-    href: "/admin/customers",
-  },
-  {
     title: "Announcements",
     icon: Megaphone,
     href: "/admin/announcements",
   },
-  {
-    title: "Settings",
-    icon: Settings,
-    href: "/admin/settings",
-  },
-]
+];
 
 export function AdminSidebar() {
-  const pathname = usePathname()
-  const { logout } = useAuth()
-  
+  const pathname = usePathname();
+  const { logout } = useAuth();
+
   return (
     <div className="w-64 border-r bg-muted/40 min-h-screen flex flex-col">
       <div className="p-6 border-b">
@@ -71,7 +59,7 @@ export function AdminSidebar() {
           <span className="font-bold text-lg">MyBags Admin</span>
         </Link>
       </div>
-      
+
       <div className="flex-1 py-6 px-4">
         <nav className="space-y-1">
           {sidebarItems.map((item) => (
@@ -91,7 +79,7 @@ export function AdminSidebar() {
           ))}
         </nav>
       </div>
-      
+
       <div className="p-4 border-t mt-auto">
         <Button
           variant="ghost"
@@ -103,5 +91,5 @@ export function AdminSidebar() {
         </Button>
       </div>
     </div>
-  )
+  );
 }

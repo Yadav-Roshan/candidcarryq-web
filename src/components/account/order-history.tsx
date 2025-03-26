@@ -1,117 +1,148 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Eye, ChevronDown, ChevronUp, Package } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { formatPrice } from "@/lib/utils"
+import { useState, useEffect } from "react";
+import { Eye, ChevronDown, ChevronUp, Package } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { formatPrice } from "@/lib/utils";
 
 // Order status types
-type OrderStatus = "processing" | "shipped" | "delivered" | "cancelled"
+type OrderStatus = "processing" | "shipped" | "delivered" | "cancelled";
 
 // Define order type
 interface Order {
-  id: string
-  date: string
-  total: number
-  status: OrderStatus
+  id: string;
+  date: string;
+  total: number;
+  status: OrderStatus;
   items: {
-    id: string
-    name: string
-    price: number
-    quantity: number
-    image?: string
-  }[]
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    image?: string;
+  }[];
 }
 
 // Status badge variants based on order status
 const getStatusBadge = (status: OrderStatus) => {
   switch (status) {
     case "processing":
-      return <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-300">Processing</Badge>
+      return (
+        <Badge
+          variant="outline"
+          className="bg-blue-500/10 text-blue-700 border-blue-300"
+        >
+          Processing
+        </Badge>
+      );
     case "shipped":
-      return <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-300">Shipped</Badge>
+      return (
+        <Badge
+          variant="outline"
+          className="bg-amber-500/10 text-amber-700 border-amber-300"
+        >
+          Shipped
+        </Badge>
+      );
     case "delivered":
-      return <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-300">Delivered</Badge>
+      return (
+        <Badge
+          variant="outline"
+          className="bg-green-500/10 text-green-700 border-green-300"
+        >
+          Delivered
+        </Badge>
+      );
     case "cancelled":
-      return <Badge variant="outline" className="bg-red-500/10 text-red-700 border-red-300">Cancelled</Badge>
+      return (
+        <Badge
+          variant="outline"
+          className="bg-red-500/10 text-red-700 border-red-300"
+        >
+          Cancelled
+        </Badge>
+      );
   }
-}
-
-// Mock orders data
-const mockOrders: Order[] = [
-  {
-    id: "ORDER-12345",
-    date: "2023-10-15",
-    total: 5600,
-    status: "delivered",
-    items: [
-      {
-        id: "1",
-        name: "Urban Commuter Backpack",
-        price: 3500,
-        quantity: 1,
-        image: "https://placehold.co/100x100?text=Backpack"
-      },
-      {
-        id: "7",
-        name: "Business Card Holder",
-        price: 1200,
-        quantity: 1,
-        image: "https://placehold.co/100x100?text=CardHolder"
-      },
-      {
-        id: "8",
-        name: "Slim Bifold Wallet",
-        price: 900,
-        quantity: 1,
-        image: "https://placehold.co/100x100?text=Wallet"
-      }
-    ]
-  },
-  {
-    id: "ORDER-12346",
-    date: "2023-10-28",
-    total: 7500,
-    status: "shipped",
-    items: [
-      {
-        id: "9",
-        name: "Weekend Luggage",
-        price: 7500,
-        quantity: 1,
-        image: "https://placehold.co/100x100?text=Luggage"
-      }
-    ]
-  },
-  {
-    id: "ORDER-12347",
-    date: "2023-11-05",
-    total: 4800,
-    status: "processing",
-    items: [
-      {
-        id: "3",
-        name: "Leather Messenger Backpack",
-        price: 4800,
-        quantity: 1,
-        image: "https://placehold.co/100x100?text=Messenger"
-      }
-    ]
-  }
-]
+};
 
 export function OrderHistory() {
-  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({})
-  const [orders, setOrders] = useState<Order[]>(mockOrders)
+  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
+    {}
+  );
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch orders from API
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setIsLoading(true);
+        // Get token from localStorage
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          setOrders([]);
+          setIsLoading(false);
+          return;
+        }
+
+        // Fetch orders from API
+        const response = await fetch("/api/user/orders", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setOrders(data.orders || []);
+        } else {
+          // If there's an error, set orders to empty array
+          setOrders([]);
+        }
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+        setOrders([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
 
   // Toggle order details view
   const toggleOrderExpansion = (orderId: string) => {
-    setExpandedOrders(prev => ({
+    setExpandedOrders((prev) => ({
       ...prev,
-      [orderId]: !prev[orderId]
-    }))
+      [orderId]: !prev[orderId],
+    }));
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Order History</CardTitle>
+          <CardDescription>Loading your orders...</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[1, 2].map((i) => (
+            <div key={i} className="border rounded-lg p-4 animate-pulse">
+              <div className="h-6 w-32 bg-muted rounded mb-4"></div>
+              <div className="h-4 w-48 bg-muted rounded"></div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
   }
 
   if (orders.length === 0) {
@@ -132,7 +163,7 @@ export function OrderHistory() {
           </Button>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -144,10 +175,7 @@ export function OrderHistory() {
       <CardContent>
         <div className="space-y-6">
           {orders.map((order) => (
-            <div 
-              key={order.id} 
-              className="border rounded-lg overflow-hidden"
-            >
+            <div key={order.id} className="border rounded-lg overflow-hidden">
               {/* Order header */}
               <div className="bg-muted p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div>
@@ -160,27 +188,29 @@ export function OrderHistory() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-medium">{formatPrice(order.total)}</span>
-                  <Button 
-                    variant="outline" 
+                  <span className="font-medium">
+                    {formatPrice(order.total)}
+                  </span>
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => toggleOrderExpansion(order.id)}
                   >
                     {expandedOrders[order.id] ? (
                       <>
-                        <ChevronUp className="h-4 w-4 mr-1" /> 
+                        <ChevronUp className="h-4 w-4 mr-1" />
                         Hide Details
                       </>
                     ) : (
                       <>
-                        <ChevronDown className="h-4 w-4 mr-1" /> 
+                        <ChevronDown className="h-4 w-4 mr-1" />
                         View Details
                       </>
                     )}
                   </Button>
                 </div>
               </div>
-              
+
               {/* Order details (expanded) */}
               {expandedOrders[order.id] && (
                 <div className="p-4 border-t">
@@ -190,8 +220,8 @@ export function OrderHistory() {
                       <div key={item.id} className="flex gap-4">
                         <div className="flex-shrink-0 w-12 h-12 bg-muted rounded-md overflow-hidden">
                           {item.image ? (
-                            <img 
-                              src={item.image} 
+                            <img
+                              src={item.image}
                               alt={item.name}
                               className="w-full h-full object-cover"
                             />
@@ -207,13 +237,15 @@ export function OrderHistory() {
                             <span className="text-muted-foreground">
                               Qty: {item.quantity} x {formatPrice(item.price)}
                             </span>
-                            <span>{formatPrice(item.price * item.quantity)}</span>
+                            <span>
+                              {formatPrice(item.price * item.quantity)}
+                            </span>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
-                  
+
                   <div className="mt-4 pt-4 border-t flex justify-between">
                     <div>
                       <Button variant="outline" size="sm">
@@ -222,7 +254,9 @@ export function OrderHistory() {
                       </Button>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Order total</p>
+                      <p className="text-sm text-muted-foreground">
+                        Order total
+                      </p>
                       <p className="font-medium">{formatPrice(order.total)}</p>
                     </div>
                   </div>
@@ -233,5 +267,5 @@ export function OrderHistory() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

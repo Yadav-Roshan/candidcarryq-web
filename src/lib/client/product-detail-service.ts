@@ -1,5 +1,3 @@
-import { mockProducts } from "../api-mock-data";
-
 // Product interface for client-side usage
 export interface ProductDetail {
   id: string;
@@ -31,9 +29,7 @@ export async function fetchProductById(
     const response = await fetch(`/api/products/${id}`);
 
     if (!response.ok) {
-      // Fallback to mock data on error
-      const mockProduct = mockProducts.find((p) => p.id === id);
-      if (mockProduct) return mockProduct;
+      console.error(`Product ${id} not found`);
       return null;
     }
 
@@ -41,9 +37,7 @@ export async function fetchProductById(
     return data.product;
   } catch (error) {
     console.error(`Error fetching product ${id}:`, error);
-    // Check mock data as fallback
-    const mockProduct = mockProducts.find((p) => p.id === id);
-    return mockProduct || null;
+    return null;
   }
 }
 

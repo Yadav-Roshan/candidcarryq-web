@@ -35,10 +35,10 @@ const fetchFeaturedProducts = async () => {
       throw new Error("Failed to fetch featured products");
     }
     const data = await response.json();
-    return data.products || mockProducts.slice(0, 4);
+    return data.products || [];
   } catch (error) {
     console.error("Error fetching featured products:", error);
-    return mockProducts.slice(0, 4);
+    return [];
   }
 };
 
@@ -46,16 +46,12 @@ const fetchProductById = async (id: string) => {
   try {
     const response = await fetch(`/api/products/${id}`);
     if (!response.ok) {
-      // Check if it exists in mock data
-      const mockProduct = mockProducts.find((p) => p.id === id);
-      return mockProduct || null;
+      return null;
     }
     return await response.json();
   } catch (error) {
     console.error(`Error fetching product ${id}:`, error);
-    // Check mock data as fallback
-    const mockProduct = mockProducts.find((p) => p.id === id);
-    return mockProduct || null;
+    return null;
   }
 };
 
@@ -73,10 +69,10 @@ const fetchAllProducts = async (params: any = {}) => {
       throw new Error("Failed to fetch products");
     }
     const data = await response.json();
-    return data.products || mockProducts;
+    return data.products || [];
   } catch (error) {
     console.error("Error fetching products:", error);
-    return mockProducts;
+    return [];
   }
 };
 

@@ -1,27 +1,28 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
-import { ThemeProvider } from '@/providers/theme-provider'
-import Header from '@/components/header' // Keep using the header from components directory
-import Footer from '@/components/footer' // Keep using the footer from components directory
-import { Toaster } from '@/components/ui/toaster'
-import { AuthProvider } from '@/contexts/auth-context'
-import { CartProvider } from '@/contexts/cart-context'
-import { WishlistProvider } from '@/contexts/wishlist-context'
-import { AnnouncementProvider } from '@/contexts/announcement-context'
-import { AnnouncementBanner } from '@/components/announcement-banner'
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { ThemeProvider } from "@/providers/theme-provider";
+import Header from "@/components/header"; // Keep using the header from components directory
+import Footer from "@/components/footer"; // Keep using the footer from components directory
+import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from "@/contexts/auth-context";
+import { CartProvider } from "@/contexts/cart-context";
+import { WishlistProvider } from "@/contexts/wishlist-context";
+import { AnnouncementProvider } from "@/contexts/announcement-context";
+import { AnnouncementBanner } from "@/components/announcement-banner";
+import { AuthStateHandler } from "@/components/common/auth-state-handler";
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'CandidWear - Premium Bags & Accessories',
-  description: 'Discover premium quality bags and accessories at CandidWear.',
-}
+  title: "CandidWear - Premium Bags & Accessories",
+  description: "Discover premium quality bags and accessories at CandidWear.",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -36,6 +37,7 @@ export default function RootLayout({
             <CartProvider>
               <WishlistProvider>
                 <AnnouncementProvider>
+                  <AuthStateHandler />
                   <div className="flex min-h-screen flex-col">
                     <AnnouncementBanner />
                     <Header />
@@ -50,5 +52,5 @@ export default function RootLayout({
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }
