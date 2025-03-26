@@ -1,24 +1,31 @@
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
-// Format price to NPR currency (Latin script)
-export function formatPrice(price: number) {
-  return new Intl.NumberFormat("en-US", {
+export function formatPrice(price: number): string {
+  return new Intl.NumberFormat("en-NP", {
     style: "currency",
     currency: "NPR",
-    currencyDisplay: "narrowSymbol",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(price)
+  }).format(price);
 }
 
-// Alternative format for NPR when Intl is not supported or for specific formatting needs
-export function formatNPR(price: number) {
-  return `NPR ${price.toLocaleString("en-US")}`
+export function formatNPR(amount: number): string {
+  return `Rs. ${amount.toLocaleString()}`;
+}
+
+export function formatDate(date: Date): string {
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+export function mergeClassList(...classes: string[]): string {
+  return classes.filter(Boolean).join(" ");
 }
 
 // Generate random string for IDs
@@ -28,20 +35,11 @@ export function generateId(length: number = 8): string {
     .substring(2, 2 + length);
 }
 
-// Format date
-export function formatDate(date: Date | string): string {
-  if (typeof date === 'string') {
-    date = new Date(date);
-  }
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric'
-  }).format(date);
-}
-
 // Calculate discount percentage
-export function calculateDiscountPercentage(originalPrice: number, salePrice: number): number {
+export function calculateDiscountPercentage(
+  originalPrice: number,
+  salePrice: number
+): number {
   if (!originalPrice || !salePrice || originalPrice <= salePrice) return 0;
   return Math.round(((originalPrice - salePrice) / originalPrice) * 100);
 }

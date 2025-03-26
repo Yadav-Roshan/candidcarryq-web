@@ -1,244 +1,243 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { 
-  Edit, 
-  Trash2, 
-  Plus, 
-  Search, 
-  ExternalLink, 
-  Filter, 
-  ArrowDownUp 
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table"
+import { useState, useEffect } from "react";
+import { Loader2, PlusCircle, Search, FilterX } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { formatPrice } from "@/lib/utils"
-import { useToast } from "@/components/ui/use-toast"
-import { mockProducts } from "@/lib/api" // Using mock data for now
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import { formatPrice } from "@/lib/utils";
+import Link from "next/link";
 
-// Removed metadata export - this is a Client Component
+// Important: Use this interface instead of importing from server-side code
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  image?: string;
+  category?: string;
+  salePrice?: number;
+  stock?: number;
+  isFeatured?: boolean;
+  publishedDate?: string;
+}
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState(mockProducts)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [sortBy, setSortBy] = useState<string | null>(null)
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
-  const router = useRouter()
-  const { toast } = useToast()
-  
-  // Delete product handler (would connect to API in production)
-  const handleDelete = (productId: string) => {
-    setProducts(products.filter(product => product.id !== productId))
-    
-    toast({
-      title: "Product deleted",
-      description: "The product has been successfully deleted",
-    })
-  }
-  
-  // Filter products based on search query
-  const filteredProducts = products.filter(product => 
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    product.category?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-  
-  // Sort products
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    if (!sortBy) return 0
-    
-    let compareA, compareB
-    
-    switch(sortBy) {
-      case "name":
-        compareA = a.name.toLowerCase()
-        compareB = b.name.toLowerCase()
-        break
-      case "price":
-        compareA = a.salePrice || a.price
-        compareB = b.salePrice || b.price
-        break
-      case "category":
-        compareA = a.category?.toLowerCase() || ''
-        compareB = b.category?.toLowerCase() || ''
-        break
-      default:
-        return 0
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { toast } = useToast();
+
+  // Client-side fetch of products
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        setIsLoading(true);
+        const response = await fetch("/api/products");
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch products");
+        }
+
+        const data = await response.json();
+        setProducts(data.products || []);
+        setFilteredProducts(data.products || []);
+      } catch (error) {
+        console.error("Error loading products:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load products",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
-    
-    if (compareA < compareB) return sortDir === "asc" ? -1 : 1
-    if (compareA > compareB) return sortDir === "asc" ? 1 : -1
-    return 0
-  })
-  
-  // Handle sort
-  const handleSort = (column: string) => {
-    if (sortBy === column) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc")
+
+    fetchProducts();
+  }, [toast]);
+
+  // Handle search
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredProducts(products);
     } else {
-      setSortBy(column)
-      setSortDir("asc")
+      const term = searchTerm.toLowerCase();
+      setFilteredProducts(
+        products.filter(
+          (product) =>
+            product.name.toLowerCase().includes(term) ||
+            (product.category && product.category.toLowerCase().includes(term))
+        )
+      );
     }
-  }
-  
+  }, [searchTerm, products]);
+
+  // Search change handler
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // Clear search
+  const clearSearch = () => {
+    setSearchTerm("");
+  };
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <h1 className="text-3xl font-bold">Products</h1>
-        <Button asChild>
-          <Link href="/admin/products/new">
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Product
-          </Link>
-        </Button>
-      </div>
-      
-      <div className="mb-6 flex gap-4 items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search products..."
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        <div className="flex gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search products..."
+              onChange={handleSearchChange}
+              value={searchTerm}
+              className="pl-10 w-full md:w-[250px]"
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                onClick={clearSearch}
+              >
+                <FilterX className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <Button asChild>
+            <Link href="/admin/products/new">
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Add Product
+            </Link>
+          </Button>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon">
-              <Filter className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleSort("name")}>
-              Sort by Name
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSort("price")}>
-              Sort by Price
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSort("category")}>
-              Sort by Category
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
-      
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[100px]">Image</TableHead>
-              <TableHead>Product Name</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead className="text-right">Price</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedProducts.length === 0 ? (
+
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="bg-card rounded-md border shadow-sm overflow-hidden">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  No products found
-                </TableCell>
+                <TableHead>Product</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Stock</TableHead>
+                <TableHead>Featured</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
-            ) : (
-              sortedProducts.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
-                      {product.image ? (
-                        <img 
-                          src={product.image} 
-                          alt={product.name}
-                          className="w-full h-full object-cover rounded-md"
-                        />
-                      ) : (
-                        <div className="text-xs text-center text-muted-foreground">
-                          No image
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{product.name}</div>
-                    <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-                      {product.description}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {product.category ? (
-                      <span className="capitalize">{product.category}</span>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">Uncategorized</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {product.salePrice ? (
-                      <div>
-                        <div className="font-medium">{formatPrice(product.salePrice)}</div>
-                        <div className="text-xs line-through text-muted-foreground">
-                          {formatPrice(product.price)}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="font-medium">{formatPrice(product.price)}</div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {product.salePrice && (
-                      <Badge className="bg-green-500">On Sale</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => router.push(`/products/${product.id}`)}
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      <span className="sr-only">View</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => router.push(`/admin/products/${product.id}`)}
-                    >
-                      <Edit className="h-4 w-4" />
-                      <span className="sr-only">Edit</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive"
-                      onClick={() => handleDelete(product.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Delete</span>
-                    </Button>
+            </TableHeader>
+            <TableBody>
+              {filteredProducts.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center h-40">
+                    {products.length === 0
+                      ? "No products found. Add your first product!"
+                      : "No products match your search."}
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ) : (
+                filteredProducts.map((product) => (
+                  <TableRow key={product.id}>
+                    <TableCell className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-md bg-muted overflow-hidden flex-shrink-0">
+                        {product.image ? (
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs">
+                            No img
+                          </div>
+                        )}
+                      </div>
+                      <span className="font-medium truncate max-w-[250px]">
+                        {product.name}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {product.category ? (
+                        <span className="capitalize">{product.category}</span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Uncategorized
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {product.salePrice ? (
+                        <div className="flex flex-col">
+                          <span className="text-green-600 dark:text-green-400 font-medium">
+                            {formatPrice(product.salePrice)}
+                          </span>
+                          <span className="text-muted-foreground text-xs line-through">
+                            {formatPrice(product.price)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span>{formatPrice(product.price)}</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {typeof product.stock === "number" ? (
+                        product.stock > 0 ? (
+                          product.stock < 5 ? (
+                            <Badge
+                              variant="outline"
+                              className="text-amber-500 border-amber-500"
+                            >
+                              Low: {product.stock}
+                            </Badge>
+                          ) : (
+                            <span>{product.stock}</span>
+                          )
+                        ) : (
+                          <Badge variant="destructive">Out of stock</Badge>
+                        )
+                      ) : (
+                        <span className="text-muted-foreground">Unknown</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {product.isFeatured ? (
+                        <Badge className="bg-primary">Featured</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">No</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/admin/products/${product.id}`}>
+                            Edit
+                          </Link>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
-  )
+  );
 }

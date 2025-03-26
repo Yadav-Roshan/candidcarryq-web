@@ -15,6 +15,7 @@ import {
   Package,
   Grid,
   LogIn,
+  LayoutDashboard,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
@@ -124,6 +125,17 @@ export default function Header() {
             <span>Categories</span>
           </Link>
 
+          {/* Admin link - Move before UserAvatarMenu and add icon */}
+          {user?.role === "admin" && (
+            <Link
+              href="/admin"
+              className="text-sm font-medium text-gray-300 hover:text-white flex items-center gap-1 transition-colors"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              <span>Admin</span>
+            </Link>
+          )}
+
           {/* Show either avatar menu or login link based on auth status */}
           {user ? (
             <UserAvatarMenu />
@@ -139,16 +151,6 @@ export default function Header() {
                 <span>Sign In</span>
               </Link>
             </Button>
-          )}
-
-          {/* Admin link in desktop nav - Only for admins */}
-          {user?.role === "admin" && (
-            <Link
-              href="/admin"
-              className="text-sm font-medium text-primary hover:text-primary-foreground transition-colors"
-            >
-              Admin Dashboard
-            </Link>
           )}
         </nav>
 
@@ -280,7 +282,7 @@ export default function Header() {
                     onClick={() => setIsMenuOpen(false)}
                     className="flex items-center gap-2 text-lg font-medium border-t pt-4 mt-2"
                   >
-                    Admin Dashboard
+                    <LayoutDashboard className="h-5 w-5" /> Admin Dashboard
                   </Link>
                 )}
               </nav>
