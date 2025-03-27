@@ -94,7 +94,7 @@ export function GoogleAuthButton() {
       setTimeout(() => {
         window.google.accounts.id.initialize({
           client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-          callback: handleGoogleResponse,
+          callback: handleCredentialResponse,
           auto_select: false,
           cancel_on_tap_outside: true,
         });
@@ -175,21 +175,28 @@ export function GoogleAuthButton() {
     }
   }, [isGoogleScriptLoaded, isInitialized]);
 
-  const handleGoogleResponse = async (response: any) => {
-    setIsLoading(true);
+  // Handle Google authentication credential response
+  const handleCredentialResponse = async (response: any) => {
     try {
-      // The GoogleCredentialResponse has a credential field with the JWT token
-      const credential = response.credential;
+      console.log("Google credential response received");
+      setIsLoading(true);
 
-      if (!credential) {
-        throw new Error(
-          "Google authentication failed - no credential received"
-        );
+      // Get the ID token from the Google credential response
+      const token = response.credential;
+      if (!token) {
+        throw new Error("No token received from Google");
       }
 
-      const success = await googleLogin(credential);
+      console.log(
+        "Authenticating with Google token:",
+        token.substring(0, 10) + "..."
+      );
+
+      // Call the googleLogin function from auth context
+      const success = await googleLogin(token);
 
       if (success) {
+        // Show success message
         toast({
           title: "Google Sign-in Successful",
           description: "You have been signed in with Google!",

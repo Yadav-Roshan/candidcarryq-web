@@ -7,6 +7,8 @@ import { useCart } from "@/contexts/cart-context";
 import { Product } from "@/lib/client/product-service";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth-context";
+import { useRouter } from "next/navigation"; // 👈 Change this import
 
 interface CartButtonProps extends Omit<ButtonProps, "onClick"> {
   product: Product;
@@ -23,11 +25,28 @@ export function CartButton({
 }: CartButtonProps) {
   const [isAdding, setIsAdding] = useState(false);
   const { addToCart } = useCart();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter(); // Using the client-side router from next/navigation
 
   const handleAddToCart = async () => {
     try {
       setIsAdding(true);
+
+      // Check if user is logged in
+      if (!user) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to add items to your cart",
+          variant: "destructive",
+        });
+
+        // Redirect to login
+        router.push(
+          `/login?from=${encodeURIComponent(window.location.pathname)}`
+        );
+        return;
+      }
 
       // Wait for the addToCart operation to complete
       const success = await addToCart(product, 1);

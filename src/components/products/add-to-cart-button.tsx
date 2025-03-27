@@ -7,6 +7,8 @@ import { Product } from "@/contexts/cart-context";
 import { Minus, Plus, ShoppingBag } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth-context";
+import { useRouter } from "next/navigation";
 
 interface AddToCartButtonProps {
   product: Product;
@@ -21,12 +23,29 @@ export default function AddToCartButton({
 }: AddToCartButtonProps) {
   const [quantity, setQuantity] = useState(1);
   const { addToCart } = useCart();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
 
   const increment = () => setQuantity((prev) => prev + 1);
   const decrement = () => setQuantity((prev) => Math.max(1, prev - 1));
 
   const handleAddToCart = () => {
+    // Check if user is authenticated
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to add items to your cart",
+        variant: "destructive",
+      });
+
+      // Save current URL to return after login
+      router.push(
+        `/login?from=${encodeURIComponent(window.location.pathname)}`
+      );
+      return;
+    }
+
     addToCart(product, quantity);
 
     toast({

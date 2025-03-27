@@ -7,7 +7,7 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import { useAuth } from "./auth-context";
+import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/components/ui/use-toast";
 
 export interface Product {
@@ -51,6 +51,9 @@ interface CartContextType {
   subtotal: number;
   isLoading: boolean;
   syncServerCart: () => Promise<void>;
+  createOrder: (
+    orderData: any
+  ) => Promise<{ success: boolean; order?: any; error?: string }>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -232,6 +235,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     size?: string
   ) => {
     try {
+      // Check if user is authenticated
+      if (!user) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to add items to your cart",
+          variant: "destructive",
+        });
+        return false;
+      }
+
       setCartItems((prevItems) => {
         const existingItem = prevItems.find((item) => item.id === product.id);
 
@@ -249,15 +262,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
               : item
           );
 
-          // Sync to server if logged in - but do this outside of state update
-          const updatedItem = updatedItems.find(
-            (item) => item.id === product.id
-          );
-          if (updatedItem && user && isInitialized) {
-            // Execute async function outside this synchronous state update
-            setTimeout(() => updateCartItemOnServer(updatedItem), 0);
-          }
-
+          // Sync to server if logged in - but don't do this inside the state update
+          // Will be handled outside the state update function
           return updatedItems;
         } else {
           // Add new item
@@ -268,15 +274,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
             size,
           };
 
-          // Sync to server if logged in - but do this outside of state update
-          if (user && isInitialized) {
-            // Execute async function outside this synchronous state update
-            setTimeout(() => addCartItemToServer(newItem), 0);
-          }
-
+          // Sync to server if logged in - but don't do this inside the state update
+          // Will be handled outside the state update function
           return [...prevItems, newItem];
         }
       });
+
+      // After state update, sync with server if user is logged in
+      // This avoids the duplicate server calls that were happening before
+      if (user && isInitialized) {
+        // Find the updated/new item in the cart after state update
+        const updatedCart = [...cartItems];
+        const itemToSync = updatedCart.find((item) => item.id === product.id);
+
+        if (itemToSync) {
+          // If item exists, update it on server
+          await updateCartItemOnServer(itemToSync);
+        } else {
+          // If it's a new item (not found in previous state), add it on server
+          await addCartItemToServer({
+            ...product,
+            quantity,
+            color,
+            size,
+          });
+        }
+      }
 
       return true; // Return success indicator
     } catch (error) {
@@ -438,6 +461,63 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const createOrder = async (orderData: any) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        return { success: false, error: "Authentication required" };
+      }
+
+      // Prepare the order data with cart items and totals
+      const orderPayload = {
+        items: cartItems.map((item) => ({
+          product: item.id,
+          name: item.name,
+          price: item.salePrice || item.price,
+          quantity: item.quantity,
+          image: item.image,
+          color: item.color,
+          size: item.size,
+        })),
+        totalAmount:
+          subtotal + (subtotal >= 5000 ? 0 : 250) + Math.round(subtotal * 0.13), // Add shipping and tax
+        shippingCost: subtotal >= 5000 ? 0 : 250,
+        taxAmount: Math.round(subtotal * 0.13),
+        ...orderData, // Include shipping address, payment info, etc.
+      };
+
+      // Send the order to the API
+      const response = await fetch("/api/user/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(orderPayload),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error:
+            result.message ||
+            `Server responded with status: ${response.status}`,
+        };
+      }
+
+      return { success: true, order: result.order };
+    } catch (error) {
+      console.error("Order creation error:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Failed to create order",
+      };
+    }
+  };
+
   const totalItems = cartItems.reduce(
     (total, item) => total + item.quantity,
     0
@@ -460,6 +540,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         subtotal,
         isLoading,
         syncServerCart,
+        createOrder,
       }}
     >
       {children}

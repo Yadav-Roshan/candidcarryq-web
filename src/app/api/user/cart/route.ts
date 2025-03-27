@@ -169,21 +169,41 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Update cart if item exists
-      const updatedUser = await User.findOneAndUpdate(
-        { _id: user.id, "cart.productId": productId },
-        {
-          $set: {
-            "cart.$.quantity": quantity,
-            "cart.$.color": color,
-            "cart.$.size": size,
-          },
-        },
-        { new: true }
+      // Check if the item already exists in the cart
+      const userData = await User.findById(user.id).select("cart");
+      if (!userData) {
+        return NextResponse.json(
+          { message: "User not found" },
+          { status: 404 }
+        );
+      }
+
+      // Try to find the item in the cart
+      const existingCartItem = userData.cart.find(
+        (item: any) => item.productId.toString() === productId
       );
 
-      // If product wasn't in cart yet, add it
-      if (!updatedUser) {
+      // Update or add the item
+      if (existingCartItem) {
+        // Update existing item
+        const updatedUser = await User.findOneAndUpdate(
+          { _id: user.id, "cart.productId": productId },
+          {
+            $set: {
+              "cart.$.quantity": quantity,
+              "cart.$.color": color,
+              "cart.$.size": size,
+            },
+          },
+          { new: true }
+        );
+
+        return NextResponse.json({
+          message: "Cart item updated successfully",
+          cartCount: updatedUser.cart.length,
+        });
+      } else {
+        // Add new item
         const newCartItem = {
           productId,
           quantity,
@@ -191,7 +211,7 @@ export async function POST(request: NextRequest) {
           size,
         };
 
-        const updatedUserWithNewItem = await User.findByIdAndUpdate(
+        const updatedUser = await User.findByIdAndUpdate(
           user.id,
           { $push: { cart: newCartItem } },
           { new: true }
@@ -199,19 +219,15 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
           message: "Product added to cart",
-          cartCount: updatedUserWithNewItem.cart.length,
+          cartCount: updatedUser.cart.length,
         });
       }
-
-      // Add this missing return statement for the update case
-      return NextResponse.json({
-        message: "Cart updated successfully",
-        cartCount: updatedUser.cart.length,
-      });
     }
 
-    // If we reached here without returning, it's likely the array case
-    // Make sure there's a proper return at the end of the array case too
+    // Add this missing return statement for the array case too
+    return NextResponse.json({
+      message: "Cart operation completed",
+    });
   } catch (error) {
     console.error("Cart update error:", error);
     return NextResponse.json({ message: "Server error" }, { status: 500 });

@@ -14,17 +14,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // Admin role check
-    if (!isAdmin(user)) {
+    // Parse the request body
+    const data = await request.json();
+    const { productId, purpose, orderId } = data;
+
+    // Allow non-admin access for payment proof uploads
+    const isPaymentProof = purpose === "payment_proof";
+
+    // Admin role check - only required for product uploads, not payment proofs
+    if (!isPaymentProof && !isAdmin(user)) {
       return NextResponse.json({ message: "Access denied" }, { status: 403 });
     }
 
-    // Parse the request body
-    const data = await request.json();
-    const { productId } = data;
-
-    // Set folder for upload
-    const folder = productId ? `products/${productId}` : "products/temp";
+    // Set folder for upload with better organization
+    let folder;
+    if (isPaymentProof) {
+      // Create a structured folder path for payment proofs
+      // Format: payment_proofs/{userId}/{orderId or timestamp}
+      const orderIdentifier = orderId || `order_${Date.now()}`;
+      folder = `payment_proofs/${user.id}/${orderIdentifier}`;
+    } else {
+      // Product images go to the product folder
+      folder = productId ? `products/${productId}` : "products/temp";
+    }
 
     // Use signed upload preset
     const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
