@@ -39,6 +39,8 @@ interface ProductDetailsProps {
     weight?: string;
     capacity?: string;
     fullDescription?: string;
+    warranty?: string; // Add warranty field
+    returnPolicy?: string; // Add return policy field
     rating?: number;
     reviewCount?: number;
     stock?: number;
@@ -68,15 +70,20 @@ export function ProductDetails({ product }: ProductDetailsProps) {
   const handleAddToCart = () => {
     if (!isInStock) return;
 
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.salePrice || product.price,
-      image: product.image,
-      quantity,
-      color: selectedColor,
-      size: selectedSize,
-    });
+    // Fix: Pass product object and quantity as separate arguments
+    // instead of embedding quantity inside the product object
+    addToCart(
+      {
+        id: product.id,
+        name: product.name,
+        price: product.salePrice || product.price,
+        image: product.image,
+        // Remove quantity from here - it's passed as second argument
+        color: selectedColor,
+        size: selectedSize,
+      },
+      quantity // Pass quantity as separate parameter
+    );
 
     toast({
       title: "Added to cart",
@@ -99,6 +106,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
         image: product.image,
         salePrice: product.salePrice,
         category: product.category,
+        stock: product.stock, // Include stock information
       });
       toast({
         title: "Added to wishlist",
@@ -395,11 +403,11 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           </div>
           <div className="flex items-center">
             <Shield className="h-5 w-5 mr-2 text-muted-foreground" />
-            <span>2 year warranty</span>
+            <span>{product.warranty || "2 year warranty"}</span>
           </div>
           <div className="flex items-center">
             <RotateCcw className="h-5 w-5 mr-2 text-muted-foreground" />
-            <span>30-day return policy</span>
+            <span>{product.returnPolicy || "30-day return policy"}</span>
           </div>
         </div>
 

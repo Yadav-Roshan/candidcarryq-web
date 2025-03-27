@@ -32,6 +32,8 @@ const productSchema = z.object({
   featured: z.boolean().optional(),
   stock: z.number().int().nonnegative("Stock must be a non-negative integer"),
   publishedDate: z.date().optional(),
+  warranty: z.string().optional(),
+  returnPolicy: z.string().optional(),
 });
 
 // GET - Get all products (public)

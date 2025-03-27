@@ -12,7 +12,9 @@ function isValidObjectId(id: string): boolean {
 // Server-side only functions with cache
 export const getAllProducts = cache(async (paramsInput: any = {}) => {
   try {
+    console.log("Connecting to database to fetch products...");
     await connectToDatabase();
+    console.log("Database connection successful");
 
     // Handle params that might be a promise
     const params =
@@ -20,7 +22,7 @@ export const getAllProducts = cache(async (paramsInput: any = {}) => {
 
     // Now safely access properties
     const page = Number(params?.page) || 1;
-    const limit = Number(params?.limit) || 12;
+    const limit = Number(params?.limit) || 100; // Increase default limit to get more products
     const category = params?.category;
     const sort = params?.sort || "newest";
     const minPrice = params?.minPrice ? Number(params.minPrice) : undefined;
@@ -51,6 +53,8 @@ export const getAllProducts = cache(async (paramsInput: any = {}) => {
       query.material = { $in: materials.map((m) => new RegExp(m, "i")) };
     }
 
+    console.log("Product query:", JSON.stringify(query));
+
     // Determine sort order
     let sortOption = {};
     switch (sort) {
@@ -72,10 +76,14 @@ export const getAllProducts = cache(async (paramsInput: any = {}) => {
 
     // Execute query with pagination
     const skip = (page - 1) * limit;
+
+    console.log("Executing product query with pagination:", { skip, limit });
     const products = await Product.find(query)
       .sort(sortOption)
       .skip(skip)
       .limit(limit);
+
+    console.log(`Found ${products.length} products in database`);
 
     if (products.length === 0) {
       console.log("No products found in database");

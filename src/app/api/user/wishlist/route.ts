@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     // Get user with populated wishlist
     const userData = await User.findById(user.id).populate({
       path: "wishlist",
-      select: "name price image category salePrice",
+      select: "name price image category salePrice stock",
     });
 
     if (!userData) {
@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
       image: item.image,
       category: item.category,
       salePrice: item.salePrice,
+      stock: item.stock || 10, // Add stock information with a default of 10
     }));
 
     return NextResponse.json({ wishlist });

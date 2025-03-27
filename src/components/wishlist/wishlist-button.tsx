@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useWishlist } from "@/contexts/wishlist-context";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 interface WishlistButtonProps {
   productId: string;
@@ -16,8 +16,10 @@ interface WishlistButtonProps {
   productImage: string;
   productCategory?: string;
   productSalePrice?: number;
+  productStock?: number;
   size?: "sm" | "md" | "lg";
   className?: string;
+  requireAuth?: boolean;
 }
 
 export function WishlistButton({
@@ -27,62 +29,77 @@ export function WishlistButton({
   productImage,
   productCategory,
   productSalePrice,
+  productStock,
   size = "md",
   className,
+  requireAuth = true,
 }: WishlistButtonProps) {
-  const { isItemInWishlist, addItem, removeItem } = useWishlist();
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
+  // Change this line to use user directly instead of isAuthenticated
+  const { user } = useAuth();
+  const router = useRouter();
+  const { isItemInWishlist, addItem, removeItem } = useWishlist();
+  const { toast } = useToast();
 
-  // Only show wishlisted state if user is logged in
-  const isWishlisted = user ? isItemInWishlist(productId) : false;
+  const isWishlisted = isItemInWishlist(productId);
 
-  const handleWishlistToggle = async (e: React.MouseEvent) => {
+  const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (isProcessing) return;
-
-    // Check if user is logged in
-    if (!user) {
+    // Change this line to check for user existence instead of isAuthenticated
+    if (requireAuth && !user) {
       toast({
         title: "Authentication required",
-        description: "Please log in to save items to your wishlist",
+        description: "Please sign in to manage your wishlist",
       });
-      router.push(`/login?from=/products/${productId}`);
+
+      // Save the current URL to return to after login
+      const currentPath = window.location.pathname;
+      router.push(`/login?from=${encodeURIComponent(currentPath)}`);
       return;
     }
 
-    setIsProcessing(true);
+    // Only set processing state if we're actually going to process something
+    if (user) {
+      setIsProcessing(true);
 
-    // Toggle wishlist status
-    if (isWishlisted) {
-      removeItem(productId);
-      toast({
-        title: "Removed from wishlist",
-        description: `${productName} has been removed from your wishlist`,
-      });
-    } else {
-      addItem({
-        id: productId,
-        name: productName,
-        price: productPrice,
-        image: productImage,
-        category: productCategory,
-        salePrice: productSalePrice,
-      });
-      toast({
-        title: "Added to wishlist",
-        description: `${productName} has been added to your wishlist`,
-      });
+      try {
+        if (isWishlisted) {
+          await removeItem(productId);
+          toast({
+            title: "Removed from wishlist",
+            description: `${productName} has been removed from your wishlist`,
+          });
+        } else {
+          await addItem({
+            id: productId,
+            name: productName,
+            price: productPrice,
+            image: productImage,
+            category: productCategory,
+            salePrice: productSalePrice,
+            stock: productStock || 10, // Default to 10 if stock is undefined
+          });
+          toast({
+            title: "Added to wishlist",
+            description: `${productName} has been added to your wishlist`,
+          });
+        }
+      } catch (error) {
+        console.error("Wishlist operation failed:", error);
+        toast({
+          title: "Operation failed",
+          description: "Could not update wishlist. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsProcessing(false);
+      }
     }
-
-    setIsProcessing(false);
   };
 
-  const sizeClassNames = {
+  const sizeClasses = {
     sm: "h-7 w-7",
     md: "h-8 w-8",
     lg: "h-10 w-10",
@@ -94,20 +111,17 @@ export function WishlistButton({
       variant="ghost"
       size="icon"
       className={cn(
-        sizeClassNames[size],
-        "rounded-full hover:bg-background/80",
-        isWishlisted && "text-red-500",
+        sizeClasses[size],
+        "rounded-full bg-background/80 hover:bg-background shadow-sm",
+        isWishlisted && "text-red-500 hover:text-red-600",
+        isProcessing && "opacity-50 cursor-not-allowed",
         className
       )}
-      onClick={handleWishlistToggle}
+      onClick={handleClick}
       disabled={isProcessing}
+      aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
     >
-      <Heart
-        className={cn("h-[60%] w-[60%]", isWishlisted && "fill-current")}
-      />
-      <span className="sr-only">
-        {isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
-      </span>
+      <Heart className={cn("h-4 w-4", isWishlisted && "fill-current")} />
     </Button>
   );
 }

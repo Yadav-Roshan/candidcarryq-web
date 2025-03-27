@@ -16,6 +16,8 @@ export interface IProduct extends Document {
   weight?: string;
   capacity?: string;
   fullDescription?: string;
+  warranty?: string; // Add warranty field
+  returnPolicy?: string; // Add return policy field
   featured: boolean;
   stock: number;
   rating: number;
@@ -87,6 +89,12 @@ const productSchema = new Schema<IProduct>(
       type: String,
     },
     fullDescription: {
+      type: String,
+    },
+    warranty: {
+      type: String,
+    },
+    returnPolicy: {
       type: String,
     },
     featured: {

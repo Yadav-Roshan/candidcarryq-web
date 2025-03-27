@@ -53,7 +53,7 @@ export default function WishlistContent() {
             salePrice={product.salePrice}
             rating={product.rating || 0}
             reviewCount={product.reviewCount || 0}
-            stock={product.stock || 0}
+            stock={product.stock !== undefined ? product.stock : 10} // Set default stock to 10 instead of 0
             description={product.description || ""}
           />
         ))}

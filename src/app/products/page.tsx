@@ -28,14 +28,13 @@ export default async function ProductsPage({
 
   return (
     <div className="container py-8">
-      <ProductsHeader title="All Products" />
-
-      <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6 mt-6">
+      <div className="flex justify-between items-center">
+        <ProductsHeader title="All Products" />
         <ProductsFilters />
+      </div>
 
-        <div className="space-y-6">
-          <ProductGrid products={products} />
-        </div>
+      <div className="mt-6">
+        <ProductGrid products={products} />
       </div>
     </div>
   );

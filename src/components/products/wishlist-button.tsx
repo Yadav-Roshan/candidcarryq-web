@@ -16,6 +16,7 @@ interface WishlistButtonProps {
   productImage: string;
   productCategory?: string;
   productSalePrice?: number;
+  productStock?: number; // Add stock property
   size?: "sm" | "md" | "lg";
   className?: string;
 }
@@ -27,6 +28,7 @@ export function WishlistButton({
   productImage,
   productCategory,
   productSalePrice,
+  productStock = 0, // Add default value
   size = "md",
   className,
 }: WishlistButtonProps) {
@@ -72,6 +74,7 @@ export function WishlistButton({
         image: productImage,
         category: productCategory,
         salePrice: productSalePrice,
+        stock: productStock, // Include stock when adding to wishlist
       });
       toast({
         title: "Added to wishlist",

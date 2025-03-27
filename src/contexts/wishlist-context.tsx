@@ -17,6 +17,7 @@ export interface WishlistItem {
   image: string;
   category?: string;
   salePrice?: number;
+  stock?: number; // Keep as optional, but handle defaults elsewhere
 }
 
 interface WishlistContextType {
@@ -26,6 +27,7 @@ interface WishlistContextType {
   clearWishlist: () => void;
   isItemInWishlist: (productId: string) => boolean;
   isLoading: boolean;
+  totalItems: number; // Add this property
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(
@@ -109,8 +111,14 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // Ensure stock is set to a reasonable default if undefined
+      const itemWithStock = {
+        ...item,
+        stock: item.stock !== undefined ? item.stock : 10,
+      };
+
       // Optimistically update UI
-      setWishlistItems((prev) => [...prev, item]);
+      setWishlistItems((prev) => [...prev, itemWithStock]);
 
       // Then update the server
       const response = await fetch("/api/user/wishlist", {
@@ -142,12 +150,24 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const removeItem = async (productId: string) => {
     // Check if user is logged in
     if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to manage your wishlist",
+        variant: "destructive",
+      });
       return;
     }
 
     try {
       const token = localStorage.getItem("authToken");
-      if (!token) return;
+      if (!token) {
+        toast({
+          title: "Authentication error",
+          description: "Please log in again",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Optimistically update UI
       setWishlistItems((prev) => prev.filter((item) => item.id !== productId));
@@ -163,34 +183,38 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         }
       );
 
-      // Handle any server errors silently
+      // If server update failed, revert UI change
       if (!response.ok) {
-        // Revert UI change
-        const item = wishlistItems.find((item) => item.id === productId);
-        if (item) {
-          setWishlistItems((prev) => [...prev, item]);
+        const originalItem = wishlistItems.find(
+          (item) => item.id === productId
+        );
+        if (originalItem) {
+          setWishlistItems((prev) => [...prev, originalItem]);
         }
 
-        console.error("Error removing from wishlist:", await response.json());
+        const error = await response.json();
+        throw new Error(error.message || "Failed to remove item from wishlist");
       }
     } catch (error) {
       console.error("Error removing from wishlist:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove item from wishlist",
+        variant: "destructive",
+      });
     }
   };
 
   const clearWishlist = () => {
-    // Only allow clearing if user is authenticated
-    if (!user) return;
-
     setWishlistItems([]);
   };
 
   const isItemInWishlist = (productId: string): boolean => {
-    // If user is not logged in, nothing is in wishlist
-    if (!user) return false;
-
     return wishlistItems.some((item) => item.id === productId);
   };
+
+  // Calculate totalItems for the header badge
+  const totalItems = wishlistItems.length;
 
   return (
     <WishlistContext.Provider
@@ -201,6 +225,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         clearWishlist,
         isItemInWishlist,
         isLoading,
+        totalItems, // Provide the totalItems value
       }}
     >
       {children}

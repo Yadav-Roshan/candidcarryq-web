@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2 } from "lucide-react";
@@ -28,6 +28,7 @@ export function GoogleAuthButton() {
   const [scriptError, setScriptError] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { googleLogin, error: authError } = useAuth();
   const buttonRef = useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -167,14 +168,12 @@ export function GoogleAuthButton() {
       buttonRef.current &&
       !isInitialized
     ) {
-      // Add a small delay to ensure the Google API is fully initialized
-      const timerId = setTimeout(() => {
+      // Only initialize once with a flag to prevent multiple initialization attempts
+      if (!isInitialized) {
         initializeGoogleAuth();
-      }, 300);
-
-      return () => clearTimeout(timerId);
+      }
     }
-  }, [isGoogleScriptLoaded, buttonRef.current, isInitialized]);
+  }, [isGoogleScriptLoaded, isInitialized]);
 
   const handleGoogleResponse = async (response: any) => {
     setIsLoading(true);
@@ -196,8 +195,11 @@ export function GoogleAuthButton() {
           description: "You have been signed in with Google!",
         });
 
-        // Redirect to account page
-        router.push("/account");
+        // Get the URL parameter to redirect to
+        const returnTo = searchParams?.get("from") || "/account";
+
+        // Use router.push directly without setTimeout to avoid state issues
+        router.push(returnTo);
       } else {
         toast({
           title: "Authentication failed",

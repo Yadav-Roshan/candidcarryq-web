@@ -231,51 +231,63 @@ export function CartProvider({ children }: { children: ReactNode }) {
     color?: string,
     size?: string
   ) => {
-    setCartItems((prevItems) => {
-      const existingItem = prevItems.find((item) => item.id === product.id);
+    try {
+      setCartItems((prevItems) => {
+        const existingItem = prevItems.find((item) => item.id === product.id);
 
-      if (existingItem) {
-        // Update existing item
-        const updatedItems = prevItems.map((item) =>
-          item.id === product.id
-            ? {
-                ...item,
-                quantity: item.quantity + quantity,
-                // Update color and size only if provided
-                ...(color && { color }),
-                ...(size && { size }),
-              }
-            : item
-        );
+        if (existingItem) {
+          // Update existing item
+          const updatedItems = prevItems.map((item) =>
+            item.id === product.id
+              ? {
+                  ...item,
+                  quantity: item.quantity + quantity,
+                  // Update color and size only if provided
+                  ...(color && { color }),
+                  ...(size && { size }),
+                }
+              : item
+          );
 
-        // Sync to server if logged in
-        if (user && isInitialized) {
+          // Sync to server if logged in - but do this outside of state update
           const updatedItem = updatedItems.find(
             (item) => item.id === product.id
           );
-          if (updatedItem) {
-            updateCartItemOnServer(updatedItem);
+          if (updatedItem && user && isInitialized) {
+            // Execute async function outside this synchronous state update
+            setTimeout(() => updateCartItemOnServer(updatedItem), 0);
           }
+
+          return updatedItems;
+        } else {
+          // Add new item
+          const newItem = {
+            ...product,
+            quantity,
+            color,
+            size,
+          };
+
+          // Sync to server if logged in - but do this outside of state update
+          if (user && isInitialized) {
+            // Execute async function outside this synchronous state update
+            setTimeout(() => addCartItemToServer(newItem), 0);
+          }
+
+          return [...prevItems, newItem];
         }
+      });
 
-        return updatedItems;
-      } else {
-        // Add new item
-        const newItem = {
-          ...product,
-          quantity,
-          color,
-          size,
-        };
-
-        // Sync to server if logged in
-        if (user && isInitialized) {
-          addCartItemToServer(newItem);
-        }
-
-        return [...prevItems, newItem];
-      }
-    });
+      return true; // Return success indicator
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive",
+      });
+      return false;
+    }
   };
 
   const removeFromCart = async (productId: string) => {
@@ -325,13 +337,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Server sync helper functions
   const addCartItemToServer = async (item: CartItem) => {
-    if (!user) return;
+    if (!user) return false;
 
     const token = localStorage.getItem("authToken");
-    if (!token) return;
+    if (!token) return false;
 
     try {
-      await fetch("/api/user/cart", {
+      const response = await fetch("/api/user/cart", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -344,8 +356,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
           size: item.size,
         }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || "Failed to add item to server cart"
+        );
+      }
+
+      return true;
     } catch (error) {
       console.error("Error adding item to server cart:", error);
+      toast({
+        title: "Sync Error",
+        description:
+          "Your cart couldn't be saved to the server. Please try again.",
+        variant: "destructive",
+      });
+      return false;
     }
   };
 
