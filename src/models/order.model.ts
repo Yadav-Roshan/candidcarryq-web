@@ -6,10 +6,20 @@ interface IOrderItem {
   price: number;
   quantity: number;
   image: string;
+  color?: string;
+  size?: string;
+}
+
+// Status history entry interface
+interface IStatusHistoryEntry {
+  status: string;
+  timestamp: Date;
+  note?: string;
 }
 
 export interface IOrder extends Document {
   user: Types.ObjectId;
+  orderNumber: string;
   items: IOrderItem[];
   totalAmount: number;
   shippingAddress: {
@@ -18,11 +28,21 @@ export interface IOrder extends Document {
     state: string;
     postalCode: string;
     country: string;
+    wardNo?: string;
+    landmark?: string;
   };
   paymentMethod: string;
-  paymentStatus: "pending" | "completed" | "failed";
-  orderStatus: "processing" | "shipped" | "delivered" | "cancelled";
+  paymentStatus: "pending" | "verified" | "rejected" | "completed" | "failed";
+  orderStatus: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   trackingNumber?: string;
+  transactionRef?: string;
+  paymentProofImage?: string;
+  shippingCost: number;
+  taxAmount: number;
+  discount?: number;
+  promoCode?: string;
+  notes?: string;
+  statusHistory: IStatusHistoryEntry[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +53,11 @@ const OrderSchema = new Schema<IOrder>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: [true, "User ID is required"],
+    },
+    orderNumber: {
+      type: String,
+      required: true,
+      unique: true,
     },
     items: [
       {
@@ -55,6 +80,8 @@ const OrderSchema = new Schema<IOrder>(
           min: [1, "Quantity must be at least 1"],
         },
         image: String,
+        color: String,
+        size: String,
       },
     ],
     totalAmount: {
@@ -83,23 +110,51 @@ const OrderSchema = new Schema<IOrder>(
         required: [true, "Country is required"],
         default: "Nepal",
       },
+      wardNo: String,
+      landmark: String,
     },
     paymentMethod: {
       type: String,
       required: [true, "Payment method is required"],
-      enum: ["cash", "esewa", "khalti", "card"],
+      enum: ["cash", "esewa", "khalti", "card", "mobile_banking"],
     },
     paymentStatus: {
       type: String,
-      enum: ["pending", "completed", "failed"],
+      enum: ["pending", "verified", "rejected", "completed", "failed"],
       default: "pending",
     },
     orderStatus: {
       type: String,
-      enum: ["processing", "shipped", "delivered", "cancelled"],
-      default: "processing",
+      enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
+      default: "pending",
     },
     trackingNumber: String,
+    transactionRef: String,
+    paymentProofImage: String,
+    shippingCost: {
+      type: Number,
+      default: 0,
+    },
+    taxAmount: {
+      type: Number,
+      default: 0,
+    },
+    discount: Number,
+    promoCode: String,
+    notes: String,
+    statusHistory: [
+      {
+        status: {
+          type: String,
+          required: true,
+        },
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+        note: String,
+      },
+    ],
   },
   {
     timestamps: true,

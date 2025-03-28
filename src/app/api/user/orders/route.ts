@@ -5,30 +5,40 @@ import User from "@/models/user.model";
 import { authenticate } from "@/middleware/auth.middleware";
 import { z } from "zod";
 
-// Define order schema for validation
+// Define order schema for validation with relaxed validation
 const orderItemSchema = z.object({
   product: z.string(),
   name: z.string(),
   price: z.number().positive(),
   quantity: z.number().int().positive(),
   image: z.string(),
+  color: z.string().optional(),
+  size: z.string().optional(),
 });
 
+// Updated shipping address schema to match the form data
 const shippingAddressSchema = z.object({
-  street: z.string(),
-  city: z.string(),
-  state: z.string(),
-  postalCode: z.string(),
-  country: z.string().default("Nepal"),
+  buildingName: z.string().optional(),
+  locality: z.string().min(1, "Locality is required"),
   wardNo: z.string().optional(),
+  postalCode: z.string().min(1, "Postal code is required"),
+  district: z.string().min(1, "District is required"),
+  province: z.string().min(1, "Province is required"),
+  country: z.string().min(1, "Country is required"),
   landmark: z.string().optional(),
+  // Also include the original street, city, state fields for compatibility
+  street: z.string().optional(), // Will be populated from locality
+  city: z.string().optional(), // Will be populated from district
+  state: z.string().optional(), // Will be populated from province
+  phoneNumber: z.string().optional(),
 });
 
+// Updated order schema with more flexible validation
 const createOrderSchema = z.object({
   items: z.array(orderItemSchema),
   totalAmount: z.number().positive(),
   shippingAddress: shippingAddressSchema,
-  paymentMethod: z.enum(["esewa", "khalti", "mobile_banking"]),
+  paymentMethod: z.enum(["esewa", "khalti", "mobile_banking", "cash", "card"]),
   transactionRef: z.string().min(1),
   paymentProofImage: z.string().url(),
   shippingCost: z.number().default(0),
@@ -42,8 +52,11 @@ export async function GET(request: NextRequest) {
   try {
     // Authentication middleware
     const authResult = await authenticate(request);
-    if (!authResult || authResult.status !== 200) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    if (authResult.status !== 200) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status }
+      );
     }
 
     const user = authResult.user;
@@ -51,7 +64,7 @@ export async function GET(request: NextRequest) {
     await connectToDatabase();
 
     // Get orders for this user
-    const orders = await Order.find({ user: user._id })
+    const orders = await Order.find({ user: user.id })
       .sort({ createdAt: -1 })
       .select(
         "orderNumber items totalAmount paymentStatus orderStatus createdAt trackingNumber"
@@ -111,36 +124,30 @@ export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
 
-    // Authentication middleware - fixed to properly log authentication errors
+    // Authentication middleware - updated to check the new format
     const authResult = await authenticate(request);
-    if (!authResult) {
-      console.error("Authentication failed: No auth result returned");
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
 
-    if (authResult.status !== 200) {
-      console.error(`Authentication failed with status: ${authResult.status}`);
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const user = authResult.user;
-    if (!user || !user._id) {
-      console.error("Authentication failed: No valid user in auth result");
+    if (authResult.status !== 200 || !authResult.user) {
       return NextResponse.json(
-        { message: "Invalid user data" },
-        { status: 401 }
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status || 401 }
       );
     }
 
+    const user = authResult.user;
+
     // Parse and validate request body
     const body = await request.json();
+    console.log("Order request body:", JSON.stringify(body, null, 2));
+
     const validationResult = createOrderSchema.safeParse(body);
 
     if (!validationResult.success) {
+      console.error("Order validation errors:", validationResult.error.errors);
       return NextResponse.json(
         {
           message: "Validation error",
-          errors: validationResult.error.errors,
+          errors: validationResult.error.format(),
         },
         { status: 400 }
       );
@@ -148,13 +155,34 @@ export async function POST(request: NextRequest) {
 
     const validatedData = validationResult.data;
 
-    // Create order
+    // Convert the shipping address format to match our order model
+    // Map new address format to the format expected by the Order model
+    const addressData = {
+      street: validatedData.shippingAddress.locality, // Use locality as street
+      city: validatedData.shippingAddress.district, // Use district as city
+      state: validatedData.shippingAddress.province, // Use province as state
+      postalCode: validatedData.shippingAddress.postalCode,
+      country: validatedData.shippingAddress.country || "Nepal",
+      // Add any additional fields as metadata or comments
+      // ...other address fields can be stored in a notes field if needed
+    };
+
+    // Create order with the adapted address format - ensuring orderStatus and paymentStatus match the schema
     const order = await Order.create({
-      user: user._id,
+      user: user.id,
       orderNumber: await generateOrderNumber(),
-      paymentStatus: "pending",
-      orderStatus: "pending",
-      ...validatedData,
+      paymentStatus: "pending", // Valid enum value
+      orderStatus: "pending", // Valid enum value
+      items: validatedData.items,
+      totalAmount: validatedData.totalAmount,
+      shippingAddress: addressData,
+      paymentMethod: validatedData.paymentMethod,
+      transactionRef: validatedData.transactionRef,
+      paymentProofImage: validatedData.paymentProofImage,
+      shippingCost: validatedData.shippingCost,
+      taxAmount: validatedData.taxAmount,
+      discount: validatedData.discount,
+      promoCode: validatedData.promoCode,
       statusHistory: [
         {
           status: "pending",
@@ -164,8 +192,11 @@ export async function POST(request: NextRequest) {
       ],
     });
 
-    // Update user's orders array
-    await User.findByIdAndUpdate(user._id, { $push: { orders: order._id } });
+    // Update user's orders array AND clear the cart in one operation
+    await User.findByIdAndUpdate(user.id, {
+      $push: { orders: order._id },
+      $set: { cart: [] }, // Clear the cart as part of order creation
+    });
 
     return NextResponse.json(
       {

@@ -21,16 +21,16 @@ export function verifyToken(token: string) {
   }
 }
 
-// Authenticate user middleware
+// Ensure this function properly checks and resolves with the user
 export async function authenticate(req: NextRequest) {
   const token = getToken(req);
   if (!token) {
-    return null;
+    return { status: 401, message: "No token provided" };
   }
 
   const decoded = verifyToken(token);
   if (!decoded || typeof decoded !== "object") {
-    return null;
+    return { status: 401, message: "Invalid token" };
   }
 
   try {
@@ -38,29 +38,25 @@ export async function authenticate(req: NextRequest) {
     const user = await User.findById(decoded.id).select("-password");
 
     if (!user) {
-      return null;
+      return { status: 404, message: "User not found" };
     }
 
-    // Ensure the user has authenticated with Google
-    if (user.authProvider !== "google" || !user.googleId) {
-      console.warn(
-        "User attempted to access a resource without Google authentication"
-      );
-      return null;
-    }
-
+    // Return user object in consistent format
     return {
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      phoneNumber: user.phoneNumber || undefined,
-      avatar: user.avatar || undefined,
-      address: user.address || undefined,
+      status: 200,
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phoneNumber: user.phoneNumber || undefined,
+        avatar: user.avatar || undefined,
+        address: user.address || undefined,
+      },
     };
   } catch (error) {
     console.error("Authentication error:", error);
-    return null;
+    return { status: 500, message: "Server error during authentication" };
   }
 }
 

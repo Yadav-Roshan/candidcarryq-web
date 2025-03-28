@@ -66,11 +66,24 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
             },
           });
 
+          console.log("Wishlist API response status:", response.status);
+
           if (response.ok) {
             const data = await response.json();
+            console.log("Wishlist API response data:", data);
             setWishlistItems(data.wishlist || []);
+          } else if (response.status === 404) {
+            // Handle 404 - Could be missing route or no wishlist items
+            console.warn("Wishlist API returned 404, route may be missing");
+            toast({
+              title: "Error",
+              description:
+                "Could not load wishlist data. Please try again later.",
+              variant: "destructive",
+            });
+            setWishlistItems([]);
           } else {
-            // Handle error silently
+            // Handle other errors silently
             setWishlistItems([]);
           }
         } else {
@@ -87,7 +100,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     };
 
     loadWishlist();
-  }, [user, authLoading]);
+  }, [user, authLoading, toast]);
 
   const addItem = async (item: WishlistItem) => {
     // Check if user is logged in

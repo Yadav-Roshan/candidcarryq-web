@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import Order from '@/models/order.model';
-import Product from '@/models/product.model';
-import { authenticate, isAdmin } from '@/middleware/auth.middleware';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from "next/server";
+import { connectToDatabase } from "@/lib/mongodb";
+import Order from "@/models/order.model";
+import Product from "@/models/product.model";
+import { authenticate, isAdmin } from "@/middleware/auth.middleware";
+import { z } from "zod";
 
 // Schema for creating order
 const orderItemSchema = z.object({
@@ -22,96 +22,108 @@ const orderSchema = z.object({
     city: z.string(),
     state: z.string(),
     postalCode: z.string(),
-    country: z.string().default('Nepal'),
+    country: z.string().default("Nepal"),
   }),
-  paymentMethod: z.enum(['cash', 'esewa', 'khalti', 'card']),
+  paymentMethod: z.enum(["cash", "esewa", "khalti", "card"]),
 });
 
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
-    
+
     // Authentication middleware
     const authResult = await authenticate(request);
     if (authResult.status !== 200) {
       return authResult;
     }
-    
+
     const user = authResult.user;
-    
+
     let query = {};
     // Regular users can only see their own orders
-    if (user.role !== 'admin') {
+    if (user.role !== "admin") {
       query = { user: user._id };
     }
-    
+
     const orders = await Order.find(query).sort({ createdAt: -1 });
-    
+
     return NextResponse.json(orders);
   } catch (error) {
-    console.error('Order API error:', error);
-    return NextResponse.json({ message: 'Server error' }, { status: 500 });
+    console.error("Order API error:", error);
+    return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
-    
+
     // Authentication middleware
     const authResult = await authenticate(request);
-    if (authResult.status !== 200) {
+    if (!authResult || authResult.status !== 200) {
       return authResult;
     }
-    
+
     const user = authResult.user;
-    
+
     // Parse and validate request body
     const body = await request.json();
     const validationResult = orderSchema.safeParse(body);
-    
+
     if (!validationResult.success) {
-      return NextResponse.json({ 
-        message: 'Validation error', 
-        errors: validationResult.error.errors 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        },
+        { status: 400 }
+      );
     }
-    
+
     const orderData = validationResult.data;
-    
+
     // Verify product availability and update stock
     for (const item of orderData.items) {
       const product = await Product.findById(item.product);
-      
+
       if (!product) {
-        return NextResponse.json({ 
-          message: `Product with ID ${item.product} not found` 
-        }, { status: 400 });
+        return NextResponse.json(
+          {
+            message: `Product with ID ${item.product} not found`,
+          },
+          { status: 400 }
+        );
       }
-      
+
       if (product.stock < item.quantity) {
-        return NextResponse.json({ 
-          message: `Not enough stock for ${product.name}. Available: ${product.stock}` 
-        }, { status: 400 });
+        return NextResponse.json(
+          {
+            message: `Not enough stock for ${product.name}. Available: ${product.stock}`,
+          },
+          { status: 400 }
+        );
       }
-      
+
       // Update product stock
       product.stock -= item.quantity;
       await product.save();
     }
-    
+
     // Create order
     const order = await Order.create({
       user: user._id,
-      ...orderData
+      ...orderData,
     });
-    
-    return NextResponse.json({
-      message: 'Order created successfully',
-      order,
-    }, { status: 201 });
+
+    return NextResponse.json(
+      {
+        message: "Order created successfully",
+        order,
+      },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error('Order API error:', error);
-    return NextResponse.json({ message: 'Server error' }, { status: 500 });
+    console.error("Order API error:", error);
+    return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }

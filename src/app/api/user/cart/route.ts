@@ -7,12 +7,15 @@ import { authenticate } from "@/middleware/auth.middleware";
 // GET - Get user's cart
 export async function GET(request: NextRequest) {
   try {
-    // Authentication middleware
-    const user = await authenticate(request);
-
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    // Authentication middleware - update to use new response format
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status }
+      );
     }
+    const user = authResult.user;
 
     await connectToDatabase();
 
@@ -68,12 +71,15 @@ export async function GET(request: NextRequest) {
 // POST - Add/update cart item or sync cart
 export async function POST(request: NextRequest) {
   try {
-    // Authentication middleware
-    const user = await authenticate(request);
-
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    // Authentication middleware - update to use new response format
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status }
+      );
     }
+    const user = authResult.user;
 
     // Parse and validate request body
     const body = await request.json();
@@ -237,12 +243,15 @@ export async function POST(request: NextRequest) {
 // DELETE - Remove product from cart or clear cart
 export async function DELETE(request: NextRequest) {
   try {
-    // Authentication middleware
-    const user = await authenticate(request);
-
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    // Authentication middleware - update to use new response format
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status }
+      );
     }
+    const user = authResult.user;
 
     await connectToDatabase();
 

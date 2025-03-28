@@ -5,11 +5,13 @@ import Product from "@/models/product.model";
 import { authenticate, isAdmin } from "@/middleware/auth.middleware";
 import { z } from "zod";
 
-// Schema for updating order status
+// Schema for updating order status - ensure values match the Order model
 const updateOrderSchema = z.object({
-  paymentStatus: z.enum(["pending", "verified", "rejected"]).optional(),
+  paymentStatus: z
+    .enum(["pending", "verified", "rejected", "completed", "failed"])
+    .optional(),
   orderStatus: z
-    .enum(["processing", "shipped", "delivered", "cancelled"])
+    .enum(["pending", "processing", "shipped", "delivered", "cancelled"])
     .optional(),
   trackingNumber: z.string().optional(),
   shippingNotes: z.string().optional(),

@@ -8,12 +8,16 @@ import mongoose from "mongoose";
 // GET - Get user's wishlist
 export async function GET(request: NextRequest) {
   try {
-    // Authentication middleware
-    const user = await authenticate(request);
-
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    // Authentication middleware - updated to use the new format
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status }
+      );
     }
+
+    const user = authResult.user;
 
     await connectToDatabase();
 
