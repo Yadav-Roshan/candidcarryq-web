@@ -17,9 +17,22 @@ const updateOrderSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } | Promise<{ id: string }> }
 ) {
   try {
+    // Resolve params if it's a Promise
+    const resolvedParams = params instanceof Promise ? await params : params;
+
+    // Ensure we have the id parameter
+    if (!resolvedParams?.id) {
+      return NextResponse.json(
+        { message: "Order ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const id = resolvedParams.id; // Now safely access the id
+
     await connectToDatabase();
 
     // Authentication middleware
@@ -29,17 +42,14 @@ export async function GET(
     }
 
     const user = authResult.user;
-    const order = await Order.findById(params.id);
+    const order = await Order.findById(id);
 
     if (!order) {
       return NextResponse.json({ message: "Order not found" }, { status: 404 });
     }
 
     // Check if user is authorized to view this order
-    if (
-      user.role !== "admin" &&
-      order.user.toString() !== user._id.toString()
-    ) {
+    if (user.role !== "admin" && order.user.toString() !== user.id.toString()) {
       return NextResponse.json(
         { message: "Not authorized to view this order" },
         { status: 403 }
@@ -55,9 +65,22 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } | Promise<{ id: string }> }
 ) {
   try {
+    // Resolve params if it's a Promise
+    const resolvedParams = params instanceof Promise ? await params : params;
+
+    // Ensure we have the id parameter
+    if (!resolvedParams?.id) {
+      return NextResponse.json(
+        { message: "Order ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const id = resolvedParams.id; // Now safely access the id
+
     await connectToDatabase();
 
     // Authentication middleware
@@ -91,11 +114,10 @@ export async function PUT(
     }
 
     // Update order
-    const order = await Order.findByIdAndUpdate(
-      params.id,
-      validationResult.data,
-      { new: true, runValidators: true }
-    );
+    const order = await Order.findByIdAndUpdate(id, validationResult.data, {
+      new: true,
+      runValidators: true,
+    });
 
     if (!order) {
       return NextResponse.json({ message: "Order not found" }, { status: 404 });
