@@ -23,7 +23,6 @@ export function verifyToken(token: string) {
 
 // Ensure this function properly checks and resolves with the user
 export async function authenticate(req: NextRequest) {
-  console.log(req);
   const token = getToken(req);
   if (!token) {
     return { status: 401, message: "No token provided" };

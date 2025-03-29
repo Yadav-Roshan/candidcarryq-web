@@ -113,7 +113,7 @@ export default function OrderSuccessPage() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button asChild>
-            <Link href="/account/orders">
+            <Link href="/account?tab=orders">
               <ShoppingBag className="mr-2 h-4 w-4" />
               View My Orders
             </Link>

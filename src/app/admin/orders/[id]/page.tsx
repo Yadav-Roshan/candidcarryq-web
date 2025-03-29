@@ -273,7 +273,8 @@ export default function AdminOrderDetailPage() {
         updateData.deliveryOtp = deliveryOtp;
       }
 
-      const response = await fetch(`/api/orders/${orderId}`, {
+      // Change the API endpoint to use the admin route which properly generates OTPs
+      const response = await fetch(`/api/admin/orders/${orderId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -345,6 +346,30 @@ export default function AdminOrderDetailPage() {
           break;
         default:
           nextStatus = currentStatus;
+      }
+    }
+
+    // When marking as shipped, make sure deliverer details are provided
+    if (statusType === "orderStatus" && currentStatus === "processing") {
+      // Before proceeding with the status update, validate deliverer details
+      if (!delivererName.trim() || !delivererPhone.trim()) {
+        toast({
+          title: "Missing Information",
+          description: "Please provide deliverer name and phone number",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate phone number format with a basic pattern
+      const phoneRegex = /^\d{10}$/;
+      if (!phoneRegex.test(delivererPhone.trim())) {
+        toast({
+          title: "Invalid Phone Number",
+          description: "Please enter a valid 10-digit phone number",
+          variant: "destructive",
+        });
+        return;
       }
     }
 

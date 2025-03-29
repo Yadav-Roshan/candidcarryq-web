@@ -88,12 +88,30 @@ export default function CheckoutPaymentForm({
     try {
       // Fix: Use the correctly named state setter
       setIsCloudinaryLoading(true);
+
+      // Get auth token for the upload endpoint
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again to continue with your payment.",
+          variant: "destructive",
+        });
+        throw new Error("No auth token found");
+      }
+
       // Pass the orderId if available for better folder structure
       const options = await getUploadWidgetOptions(
         undefined,
         "payment_proof",
         orderId
       );
+
+      // Set the signature endpoint with the token as a query parameter
+      options.signatureEndpoint = `/api/payment/upload?token=${encodeURIComponent(
+        token
+      )}`;
+
       // Fix: Use the correctly named state setter
       setUploadOptions(options);
     } catch (error) {
@@ -281,7 +299,6 @@ export default function CheckoutPaymentForm({
                       handleImageUpload(result.info as CloudinaryUploadResult);
                     }
                   }}
-                  signatureEndpoint="/api/admin/upload"
                 >
                   {({ open }) => (
                     <Button
