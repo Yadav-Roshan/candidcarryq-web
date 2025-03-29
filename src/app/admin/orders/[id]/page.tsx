@@ -13,6 +13,9 @@ import {
   AlertTriangle,
   Loader2,
   ExternalLink,
+  Clock,
+  Check,
+  X,
 } from "lucide-react";
 import {
   Card,
@@ -20,6 +23,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -35,12 +39,15 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatPrice, formatDate } from "@/lib/utils";
 import Image from "next/image";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface OrderItem {
   product: string;
@@ -98,55 +105,69 @@ export default function AdminOrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [trackingNumber, setTrackingNumber] = useState("");
   const [viewPaymentProof, setViewPaymentProof] = useState(false);
   const orderId = params.id as string;
   const [note, setNote] = useState("");
   const [stockAdjustmentWarning, setStockAdjustmentWarning] = useState(false);
   const [stockData, setStockData] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    const fetchOrder = async () => {
-      try {
-        setIsLoading(true);
-        const token = localStorage.getItem("authToken");
-        if (!token) {
-          router.push("/login");
-          return;
-        }
+  // New state for status management
+  const [showRejectionDialog, setShowRejectionDialog] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [statusToReject, setStatusToReject] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<string>("payment"); // Set active tab for status management
 
-        const response = await fetch(`/api/orders/${orderId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+  // Move fetchOrder outside useEffect so it can be called from other functions
+  const fetchOrder = async () => {
+    try {
+      setIsLoading(true);
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch order");
-        }
+      const response = await fetch(`/api/orders/${orderId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-        const data = await response.json();
-        setOrder(data.order);
-        if (data.order.trackingNumber) {
-          setTrackingNumber(data.order.trackingNumber);
-        }
+      if (!response.ok) {
+        throw new Error("Failed to fetch order");
+      }
+
+      const order = await response.json();
+
+      // Ensure data has the order property
+      if (order) {
+        setOrder(order);
 
         // Check stock levels for items if payment is pending
-        if (data.order.paymentStatus === "pending") {
-          await checkStockLevels(data.order.items);
+        if (order.paymentStatus === "pending") {
+          await checkStockLevels(order.items);
         }
-      } catch (error) {
-        console.error("Error loading order:", error);
+      } else {
+        // Handle the case when order data is missing
         toast({
           title: "Error",
-          description: "Failed to load order details",
+          description: "Order data is incomplete or missing",
           variant: "destructive",
         });
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Error loading order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load order details",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchOrder();
   }, [orderId, router, toast]);
 
@@ -192,7 +213,12 @@ export default function AdminOrderDetailPage() {
     }
   };
 
-  const updateOrderStatus = async (status: string, note: string = "") => {
+  // Modified updateOrderStatus function - no longer needs to check for tracking number
+  const updateOrderStatus = async (
+    statusType: "paymentStatus" | "orderStatus",
+    value: string,
+    note: string = ""
+  ) => {
     try {
       setIsUpdating(true);
       const token = localStorage.getItem("authToken");
@@ -202,22 +228,19 @@ export default function AdminOrderDetailPage() {
       }
 
       let updateData: any = {};
+      updateData[statusType] = value;
 
-      if (status === "verified" || status === "rejected") {
-        updateData.paymentStatus = status;
-      } else {
-        updateData.orderStatus = status;
-      }
+      // Tracking number will be generated on the server side
+      // No need to handle it here anymore
 
-      // Add tracking number if shipping the order
-      if (status === "shipped" && trackingNumber) {
-        updateData.trackingNumber = trackingNumber;
-      }
+      // FIXED: Create a status history entry to add (not replace)
+      const newStatusEntry = {
+        status: value,
+        timestamp: new Date().toISOString(),
+        note: note || undefined,
+      };
 
-      // Add note if provided
-      if (note) {
-        updateData.notes = note;
-      }
+      updateData.statusHistoryEntry = newStatusEntry;
 
       const response = await fetch(`/api/orders/${orderId}`, {
         method: "PUT",
@@ -237,11 +260,13 @@ export default function AdminOrderDetailPage() {
 
       toast({
         title: "Status Updated",
-        description: `Order has been marked as ${status}`,
+        description: `Order ${
+          statusType === "paymentStatus" ? "payment" : "status"
+        } has been marked as ${value}`,
       });
 
       // If payment was verified, refresh the page to update stock information
-      if (status === "verified") {
+      if (statusType === "paymentStatus" && value === "verified") {
         fetchOrder();
       }
     } catch (error) {
@@ -254,6 +279,87 @@ export default function AdminOrderDetailPage() {
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  // Handle approval (tick button) - Remove tracking number validation for shipping
+  const handleApproveStatus = (
+    statusType: "paymentStatus" | "orderStatus",
+    currentStatus: string
+  ) => {
+    // Determine next status based on current status
+    let nextStatus = "";
+
+    if (statusType === "paymentStatus" && currentStatus === "pending") {
+      nextStatus = "verified";
+    } else if (statusType === "orderStatus") {
+      switch (currentStatus) {
+        case "pending":
+          nextStatus = "processing";
+          break;
+        case "processing":
+          nextStatus = "shipped"; // No tracking validation required now
+          break;
+        case "shipped":
+          nextStatus = "delivered";
+          break;
+        default:
+          nextStatus = currentStatus;
+      }
+    }
+
+    if (nextStatus && nextStatus !== currentStatus) {
+      // Generate automatic note if none provided
+      let statusNote = note;
+      if (!statusNote.trim()) {
+        if (statusType === "paymentStatus") {
+          statusNote = `Payment ${nextStatus}`;
+        } else {
+          switch (nextStatus) {
+            case "processing":
+              statusNote = "Order is being processed";
+              break;
+            case "shipped":
+              statusNote = "Order shipped"; // No tracking number in note
+              break;
+            case "delivered":
+              statusNote = "Order successfully delivered";
+              break;
+            default:
+              statusNote = `Status changed to ${nextStatus}`;
+          }
+        }
+      }
+
+      // Proceed with the update
+      updateOrderStatus(statusType, nextStatus, statusNote);
+      setNote(""); // Clear the note after use
+    }
+  };
+
+  // Handle rejection button click
+  const handleRejectClick = (statusType: "paymentStatus" | "orderStatus") => {
+    setStatusToReject(statusType);
+    setRejectionReason("");
+    setShowRejectionDialog(true);
+  };
+
+  // Handle rejection confirm
+  const handleRejectConfirm = () => {
+    if (!rejectionReason.trim()) {
+      toast({
+        title: "Rejection Reason Required",
+        description: "Please provide a reason for the rejection",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const statusType = statusToReject as "paymentStatus" | "orderStatus";
+    const value = statusType === "paymentStatus" ? "rejected" : "cancelled";
+
+    updateOrderStatus(statusType, value, rejectionReason);
+    setShowRejectionDialog(false);
+    setRejectionReason("");
   };
 
   const getStatusBadge = (status: string) => {
@@ -386,18 +492,303 @@ export default function AdminOrderDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Order Summary */}
+        {/* Left/Main Content - Order Summary and Status Management */}
         <div className="xl:col-span-2">
           <Card>
             <CardHeader>
+              <CardTitle>Order Management</CardTitle>
+              <CardDescription>Manage payment and order status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="w-full"
+              >
+                <TabsList className="grid grid-cols-2 w-full">
+                  <TabsTrigger value="payment">Payment Status</TabsTrigger>
+                  <TabsTrigger value="order">Order Status</TabsTrigger>
+                </TabsList>
+
+                {/* Payment Status Tab */}
+                <TabsContent value="payment" className="pt-6 space-y-6">
+                  <div className="bg-muted/30 p-4 rounded-lg">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                      <div>
+                        <h3 className="font-medium mb-1">
+                          Current Payment Status
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(order.paymentStatus)}
+                          <span className="text-muted-foreground">
+                            {order.paymentStatus === "pending" &&
+                              "Awaiting verification"}
+                            {order.paymentStatus === "verified" &&
+                              "Payment confirmed"}
+                            {order.paymentStatus === "rejected" &&
+                              "Payment was rejected"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          onClick={() => setViewPaymentProof(true)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          View Payment Proof
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Payment Details Summary */}
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Method</p>
+                        <p className="font-medium">
+                          {order.paymentMethod === "mobile_banking"
+                            ? "Mobile Banking"
+                            : order.paymentMethod.charAt(0).toUpperCase() +
+                              order.paymentMethod.slice(1)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">
+                          Transaction Reference
+                        </p>
+                        <p className="font-medium font-mono">
+                          {order.transactionRef}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Amount</p>
+                        <p className="font-medium">
+                          {formatPrice(order.totalAmount)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Payment Actions - Only show if payment is pending */}
+                  {order.paymentStatus === "pending" && (
+                    <div className="border rounded-lg p-4">
+                      <h3 className="font-medium mb-4">Verify Payment</h3>
+
+                      {stockAdjustmentWarning && (
+                        <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800 text-sm">
+                          <AlertTriangle className="h-4 w-4 inline mr-1" />
+                          Warning: Some items may not have enough stock.
+                        </div>
+                      )}
+
+                      <div className="mb-3">
+                        <Label htmlFor="note">Add a Note (optional)</Label>
+                        <Input
+                          id="note"
+                          placeholder="Add approval note (optional)"
+                          value={note}
+                          onChange={(e) => setNote(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="flex gap-2 mt-4">
+                        <Button
+                          onClick={() =>
+                            handleApproveStatus(
+                              "paymentStatus",
+                              order.paymentStatus
+                            )
+                          }
+                          disabled={isUpdating}
+                          className="bg-green-600 hover:bg-green-700 flex-1"
+                        >
+                          <Check className="mr-2 h-4 w-4" />
+                          Approve Payment
+                        </Button>
+
+                        <Button
+                          onClick={() => handleRejectClick("paymentStatus")}
+                          disabled={isUpdating}
+                          variant="destructive"
+                          className="flex-1"
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          Reject Payment
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Order Status Tab */}
+                <TabsContent value="order" className="pt-6 space-y-6">
+                  <div className="bg-muted/30 p-4 rounded-lg">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                      <div>
+                        <h3 className="font-medium mb-1">
+                          Current Order Status
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(order.orderStatus)}
+                          <span className="text-muted-foreground">
+                            {order.orderStatus === "pending" && "Order placed"}
+                            {order.orderStatus === "processing" &&
+                              "Order is being prepared"}
+                            {order.orderStatus === "shipped" &&
+                              "Order has been shipped"}
+                            {order.orderStatus === "delivered" &&
+                              "Order has been delivered"}
+                            {order.orderStatus === "cancelled" &&
+                              "Order was cancelled"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status progress visualization */}
+                    <div className="mt-6 relative">
+                      <div className="absolute top-4 left-0 right-0 h-1 bg-muted"></div>
+                      <div
+                        className="absolute top-4 left-0 h-1 bg-primary transition-all duration-500"
+                        style={{
+                          width:
+                            order.orderStatus === "pending"
+                              ? "0%"
+                              : order.orderStatus === "processing"
+                              ? "33%"
+                              : order.orderStatus === "shipped"
+                              ? "66%"
+                              : order.orderStatus === "delivered"
+                              ? "100%"
+                              : "0%",
+                        }}
+                      ></div>
+
+                      <div className="relative flex justify-between">
+                        {["pending", "processing", "shipped", "delivered"].map(
+                          (status, index) => (
+                            <div
+                              key={status}
+                              className="flex flex-col items-center"
+                            >
+                              <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center mb-2
+                              ${
+                                order.orderStatus === status
+                                  ? "bg-primary text-primary-foreground"
+                                  : [
+                                      "pending",
+                                      "processing",
+                                      "shipped",
+                                      "delivered",
+                                    ].indexOf(order.orderStatus) >= index
+                                  ? "bg-primary/80 text-primary-foreground"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                              >
+                                {status === "pending" && (
+                                  <Clock className="h-4 w-4" />
+                                )}
+                                {status === "processing" && (
+                                  <Package className="h-4 w-4" />
+                                )}
+                                {status === "shipped" && (
+                                  <Truck className="h-4 w-4" />
+                                )}
+                                {status === "delivered" && (
+                                  <CheckCircle className="h-4 w-4" />
+                                )}
+                              </div>
+                              <span className="text-xs capitalize text-muted-foreground">
+                                {status}
+                              </span>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Tracking number display field if shipped */}
+                    {(order.orderStatus === "shipped" ||
+                      order.orderStatus === "delivered") &&
+                      order.trackingNumber && (
+                        <div className="mt-6 p-3 bg-muted/50 rounded-lg">
+                          <p className="text-sm text-muted-foreground mb-1">
+                            Tracking Number
+                          </p>
+                          <p className="font-medium font-mono">
+                            {order.trackingNumber}
+                          </p>
+                        </div>
+                      )}
+                  </div>
+
+                  {/* Order Status Actions */}
+                  {order.paymentStatus === "verified" &&
+                    order.orderStatus !== "delivered" &&
+                    order.orderStatus !== "cancelled" && (
+                      <div className="border rounded-lg p-4">
+                        <h3 className="font-medium mb-4">
+                          Update Order Status
+                        </h3>
+
+                        <div className="mb-3">
+                          <Label htmlFor="statusNote">
+                            Add a Note (optional)
+                          </Label>
+                          <Input
+                            id="statusNote"
+                            placeholder="Add status update note (optional)"
+                            value={note}
+                            onChange={(e) => setNote(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="flex gap-2 mt-4">
+                          <Button
+                            onClick={() =>
+                              handleApproveStatus(
+                                "orderStatus",
+                                order.orderStatus
+                              )
+                            }
+                            disabled={isUpdating}
+                            className="bg-green-600 hover:bg-green-700 flex-1"
+                          >
+                            <Check className="mr-2 h-4 w-4" />
+                            {order.orderStatus === "pending"
+                              ? "Start Processing"
+                              : order.orderStatus === "processing"
+                              ? "Mark Shipped"
+                              : order.orderStatus === "shipped"
+                              ? "Confirm Delivery"
+                              : "Update Status"}
+                          </Button>
+
+                          <Button
+                            onClick={() => handleRejectClick("orderStatus")}
+                            disabled={isUpdating}
+                            variant="destructive"
+                            className="flex-1"
+                          >
+                            <X className="mr-2 h-4 w-4" />
+                            Cancel Order
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+
+          {/* Order Summary Card */}
+          <Card className="mt-6">
+            <CardHeader>
               <CardTitle>Order Summary</CardTitle>
-              <div className="flex gap-2">
-                <Badge variant="outline" className="bg-primary/10 text-primary">
-                  {order.orderStatus.charAt(0).toUpperCase() +
-                    order.orderStatus.slice(1)}
-                </Badge>
-                {getStatusBadge(order.paymentStatus)}
-              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -505,156 +896,37 @@ export default function AdminOrderDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Payment Information */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Payment Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-medium mb-2">Payment Details</h3>
-                  <div className="space-y-1 text-sm">
-                    <p>
-                      <span className="font-medium">Method:</span>{" "}
-                      {order.paymentMethod === "mobile_banking"
-                        ? "Mobile Banking"
-                        : order.paymentMethod.charAt(0).toUpperCase() +
-                          order.paymentMethod.slice(1)}
-                    </p>
-                    <p>
-                      <span className="font-medium">
-                        Transaction Reference:
-                      </span>{" "}
-                      {order.transactionRef}
-                    </p>
-                    <p>
-                      <span className="font-medium">Status:</span>{" "}
-                      {getStatusBadge(order.paymentStatus)}
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => setViewPaymentProof(true)}
-                    >
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      View Payment Proof
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Payment Actions */}
-                {order.paymentStatus === "pending" && (
-                  <div>
-                    <h3 className="font-medium mb-2">Payment Verification</h3>
-                    {stockAdjustmentWarning && (
-                      <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800 text-sm">
-                        <AlertTriangle className="h-4 w-4 inline mr-1" />
-                        Warning: Some items may not have enough stock.
-                      </div>
-                    )}
-
-                    <div className="mb-3">
-                      <textarea
-                        placeholder="Add a note (optional)"
-                        className="w-full px-3 py-2 border rounded-md text-sm"
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                        rows={2}
-                      />
-                    </div>
-
-                    <div className="flex gap-2 flex-wrap">
-                      <Button
-                        onClick={() => updateOrderStatus("verified")}
-                        disabled={isUpdating}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Verify Payment
-                      </Button>
-                      <Button
-                        onClick={() => updateOrderStatus("rejected")}
-                        disabled={isUpdating}
-                        variant="destructive"
-                      >
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Reject Payment
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Order Actions */}
-                {order.paymentStatus === "verified" && (
-                  <div>
-                    <h3 className="font-medium mb-2">Order Actions</h3>
-                    {order.orderStatus === "pending" && (
-                      <Button
-                        onClick={() => updateOrderStatus("processing")}
-                        disabled={isUpdating}
-                      >
-                        <Package className="mr-2 h-4 w-4" />
-                        Mark as Processing
-                      </Button>
-                    )}
-
-                    {order.orderStatus === "processing" && (
-                      <div className="space-y-2">
-                        <div className="flex items-end gap-2">
-                          <div className="flex-1">
-                            <Label htmlFor="trackingNumber">
-                              Tracking Number
-                            </Label>
-                            <Input
-                              id="trackingNumber"
-                              value={trackingNumber}
-                              onChange={(e) =>
-                                setTrackingNumber(e.target.value)
-                              }
-                              placeholder="Enter tracking number"
-                            />
-                          </div>
-                          <Button
-                            onClick={() => updateOrderStatus("shipped")}
-                            disabled={isUpdating || !trackingNumber}
-                          >
-                            <Truck className="mr-2 h-4 w-4" />
-                            Mark as Shipped
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {order.orderStatus === "shipped" && (
-                      <Button
-                        onClick={() => updateOrderStatus("delivered")}
-                        disabled={isUpdating}
-                      >
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Mark as Delivered
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Order History */}
           <Card className="mt-6">
             <CardHeader>
               <CardTitle>Order History</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {order.statusHistory && order.statusHistory.length > 0 ? (
-                  order.statusHistory.map((entry, index) => (
-                    <div key={index} className="flex items-start gap-4">
-                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+              {order.statusHistory && order.statusHistory.length > 0 ? (
+                <div className="space-y-4">
+                  {order.statusHistory.map((entry, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start gap-4 border-b pb-4 last:border-0"
+                    >
+                      <div
+                        className={`h-10 w-10 rounded-full flex items-center justify-center
+                        ${
+                          entry.status === "rejected" ||
+                          entry.status === "cancelled"
+                            ? "bg-red-100"
+                            : entry.status === "verified" ||
+                              entry.status === "delivered"
+                            ? "bg-green-100"
+                            : entry.status === "shipped"
+                            ? "bg-amber-100"
+                            : entry.status === "processing"
+                            ? "bg-blue-100"
+                            : "bg-muted"
+                        }`}
+                      >
                         {entry.status === "pending" && (
-                          <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                          <Clock className="h-5 w-5 text-yellow-500" />
                         )}
                         {entry.status === "processing" && (
                           <Package className="h-5 w-5 text-blue-500" />
@@ -677,32 +949,43 @@ export default function AdminOrderDetailPage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex justify-between items-start">
-                          <p className="font-medium">
-                            {entry.status.charAt(0).toUpperCase() +
-                              entry.status.slice(1)}
-                          </p>
-                          <time className="text-muted-foreground text-sm">
-                            {formatDate(entry.timestamp)}
-                          </time>
+                          <div>
+                            <p className="font-medium">
+                              {entry.status.charAt(0).toUpperCase() +
+                                entry.status.slice(1)}
+                            </p>
+                            <time className="text-sm text-muted-foreground">
+                              {formatDate(entry.timestamp)}
+                            </time>
+                          </div>
+                          {(entry.status === "rejected" ||
+                            entry.status === "cancelled") && (
+                            <Badge variant="destructive" className="ml-2">
+                              {entry.status === "rejected"
+                                ? "Rejected"
+                                : "Cancelled"}
+                            </Badge>
+                          )}
                         </div>
                         {entry.note && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {entry.note}
-                          </p>
+                          <div className="mt-2 p-3 bg-muted/30 rounded text-sm">
+                            <p className="font-medium mb-1">Note:</p>
+                            <p>{entry.note}</p>
+                          </div>
                         )}
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-muted-foreground">No history available</p>
-                )}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No history available</p>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Customer Information */}
-        <div>
+        {/* Right Side - Customer Information */}
+        <div className="xl:col-span-1">
           <Card>
             <CardHeader>
               <CardTitle>Customer Information</CardTitle>
@@ -713,46 +996,96 @@ export default function AdminOrderDetailPage() {
                 <p className="text-muted-foreground">{order.user.email}</p>
               </div>
 
+              <Separator className="my-4" />
+
               <div className="space-y-4">
                 <div>
                   <h3 className="font-medium mb-2">Shipping Address</h3>
-                  <div className="text-sm text-muted-foreground">
-                    <p>{order.shippingAddress.street}</p>
-                    {order.shippingAddress.wardNo && (
-                      <p>Ward: {order.shippingAddress.wardNo}</p>
+                  <div className="text-sm bg-muted/30 p-3 rounded-md space-y-1">
+                    {/* Show building name if available */}
+                    {order.shippingAddress.buildingName && (
+                      <p>
+                        <span className="font-medium text-muted-foreground">
+                          Building/House:
+                        </span>{" "}
+                        {order.shippingAddress.buildingName}
+                      </p>
                     )}
+
                     <p>
-                      {order.shippingAddress.city},{" "}
-                      {order.shippingAddress.state}{" "}
+                      <span className="font-medium text-muted-foreground">
+                        Street/Locality:
+                      </span>{" "}
+                      {order.shippingAddress.street}
+                    </p>
+
+                    {/* Show ward number if available */}
+                    {order.shippingAddress.wardNo && (
+                      <p>
+                        <span className="font-medium text-muted-foreground">
+                          Ward:
+                        </span>{" "}
+                        {order.shippingAddress.wardNo}
+                      </p>
+                    )}
+
+                    <p>
+                      <span className="font-medium text-muted-foreground">
+                        City/District:
+                      </span>{" "}
+                      {order.shippingAddress.city}
+                    </p>
+
+                    <p>
+                      <span className="font-medium text-muted-foreground">
+                        State/Province:
+                      </span>{" "}
+                      {order.shippingAddress.state}
+                    </p>
+
+                    <p>
+                      <span className="font-medium text-muted-foreground">
+                        Postal Code:
+                      </span>{" "}
                       {order.shippingAddress.postalCode}
                     </p>
-                    <p>{order.shippingAddress.country}</p>
+
+                    <p>
+                      <span className="font-medium text-muted-foreground">
+                        Country:
+                      </span>{" "}
+                      {order.shippingAddress.country}
+                    </p>
+
+                    {/* Show landmark if available */}
                     {order.shippingAddress.landmark && (
-                      <p>Landmark: {order.shippingAddress.landmark}</p>
+                      <p>
+                        <span className="font-medium text-muted-foreground">
+                          Landmark:
+                        </span>{" "}
+                        {order.shippingAddress.landmark}
+                      </p>
+                    )}
+
+                    {/* Show phone number if available */}
+                    {order.shippingAddress.phoneNumber && (
+                      <p>
+                        <span className="font-medium text-muted-foreground">
+                          Phone:
+                        </span>{" "}
+                        {order.shippingAddress.phoneNumber}
+                      </p>
                     )}
                   </div>
                 </div>
 
-                {/* Tracking Information */}
-                {order.trackingNumber && (
-                  <div>
-                    <h3 className="font-medium mb-2">Tracking Information</h3>
-                    <div className="text-sm">
-                      <p>
-                        <span className="font-medium">Tracking Number:</span>{" "}
-                        {order.trackingNumber}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Additional Notes */}
+                {/* Additional Info */}
                 {order.notes && (
                   <div>
-                    <h3 className="font-medium mb-2">Additional Notes</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {order.notes}
-                    </p>
+                    <h3 className="font-medium mb-2">Order Notes</h3>
+                    <div className="text-sm bg-muted/30 p-3 rounded-md">
+                      <p>{order.notes}</p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -775,19 +1108,68 @@ export default function AdminOrderDetailPage() {
               className="object-contain"
             />
           </div>
-          <div className="mt-2 text-sm text-muted-foreground">
-            <p>
-              <span className="font-medium">Transaction Reference:</span>{" "}
-              {order.transactionRef}
-            </p>
-            <p>
-              <span className="font-medium">Payment Method:</span>{" "}
-              {order.paymentMethod === "mobile_banking"
-                ? "Mobile Banking"
-                : order.paymentMethod.charAt(0).toUpperCase() +
-                  order.paymentMethod.slice(1)}
+          <div className="bg-muted/30 p-3 rounded-md mt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Transaction Reference
+                </p>
+                <p className="font-medium font-mono">{order.transactionRef}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Payment Method</p>
+                <p className="font-medium">
+                  {order.paymentMethod === "mobile_banking"
+                    ? "Mobile Banking"
+                    : order.paymentMethod.charAt(0).toUpperCase() +
+                      order.paymentMethod.slice(1)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rejection Reason Dialog */}
+      <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {statusToReject === "paymentStatus"
+                ? "Reject Payment"
+                : "Cancel Order"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="rejectionReason" className="mb-2 block">
+              Please provide a reason for{" "}
+              {statusToReject === "paymentStatus"
+                ? "rejection"
+                : "cancellation"}
+              :
+            </Label>
+            <Input
+              id="rejectionReason"
+              placeholder="Enter reason"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              className="mb-2"
+            />
+            <p className="text-sm text-muted-foreground">
+              This reason will be visible to the customer.
             </p>
           </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button variant="destructive" onClick={handleRejectConfirm}>
+              <X className="mr-2 h-4 w-4" />
+              {statusToReject === "paymentStatus"
+                ? "Reject Payment"
+                : "Cancel Order"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

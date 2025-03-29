@@ -103,10 +103,33 @@ export async function PUT(
       currentOrder.paymentStatus === "pending" &&
       updateData.paymentStatus === "verified";
 
+    // Create update operation with $set and optional $push
+    let updateOperation: any = { $set: {} };
+
+    // Add properties to $set
+    if (updateData.paymentStatus) {
+      updateOperation.$set.paymentStatus = updateData.paymentStatus;
+    }
+
+    if (updateData.orderStatus) {
+      updateOperation.$set.orderStatus = updateData.orderStatus;
+    }
+
+    if (updateData.trackingNumber) {
+      updateOperation.$set.trackingNumber = updateData.trackingNumber;
+    }
+
+    // Add status history entry if provided
+    if (updateData.statusHistoryEntry) {
+      updateOperation.$push = {
+        statusHistory: updateData.statusHistoryEntry,
+      };
+    }
+
     // Update order
     const updatedOrder = await Order.findByIdAndUpdate(
       params.id,
-      { $set: updateData },
+      updateOperation,
       { new: true }
     );
 

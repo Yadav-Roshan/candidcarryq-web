@@ -113,7 +113,8 @@ export default function AdminOrdersPage() {
   const fetchOrders = async (page = 1, status = "all") => {
     try {
       setIsLoading(true);
-      let url = `/api/orders?page=${page}&limit=10`;
+      // Change the API endpoint to the admin-specific one
+      let url = `/api/admin/orders?page=${page}&limit=10`;
 
       if (status !== "all") {
         url += `&status=${status}`;
