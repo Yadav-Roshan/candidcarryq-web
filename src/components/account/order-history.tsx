@@ -78,6 +78,9 @@ interface Order {
     timestamp: string;
     note?: string;
   }>;
+  deliveryOtp?: string;
+  delivererName?: string;
+  delivererPhone?: string;
 }
 
 // Get status color based on order status
@@ -783,14 +786,15 @@ export function OrderHistory() {
                         <TabsContent value="shipping" className="pt-4">
                           {order.shippingAddress && (
                             <div className="space-y-4">
-                              <div>
-                                <h5 className="text-sm font-medium">
-                                  Delivery Address
+                              <div className="bg-muted/30 p-3 rounded-md">
+                                <h5 className="text-sm font-medium mb-2">
+                                  Shipping Address
                                 </h5>
-                                <div className="bg-muted/30 p-3 rounded-md mt-2 text-sm">
-                                  <p className="font-medium">
-                                    {order.shippingAddress.street}
-                                  </p>
+                                <div className="text-sm space-y-1">
+                                  {order.shippingAddress.buildingName && (
+                                    <p>{order.shippingAddress.buildingName}</p>
+                                  )}
+                                  <p>{order.shippingAddress.street}</p>
                                   {order.shippingAddress.wardNo && (
                                     <p>Ward {order.shippingAddress.wardNo}</p>
                                   )}
@@ -800,133 +804,157 @@ export function OrderHistory() {
                                     {order.shippingAddress.postalCode}
                                   </p>
                                   <p>{order.shippingAddress.country}</p>
+                                  {order.shippingAddress.phoneNumber && (
+                                    <p className="mt-1">
+                                      Phone: {order.shippingAddress.phoneNumber}
+                                    </p>
+                                  )}
                                   {order.shippingAddress.landmark && (
-                                    <p className="mt-1 text-muted-foreground">
+                                    <p className="mt-1">
                                       Landmark: {order.shippingAddress.landmark}
                                     </p>
                                   )}
                                 </div>
                               </div>
 
-                              <div>
-                                <h5 className="text-sm font-medium">
-                                  Shipping Details
+                              <div className="bg-muted/30 p-3 rounded-md">
+                                <h5 className="text-sm font-medium mb-2">
+                                  Delivery Status
                                 </h5>
-                                <div className="bg-muted/30 p-3 rounded-md mt-2 text-sm">
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                      <p className="text-muted-foreground">
-                                        Shipping Cost:
-                                      </p>
-                                      <p>
-                                        {formatPrice(order.shippingCost || 0)}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-muted-foreground">
-                                        Method:
-                                      </p>
-                                      <p>Standard Delivery</p>
-                                    </div>
-                                  </div>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <StatusBadge status={currentOrderStatus} />
+                                  <span className="text-sm">
+                                    {currentOrderStatus === "pending" &&
+                                      "Order received, waiting to be processed"}
+                                    {currentOrderStatus === "processing" &&
+                                      "Order is being prepared for shipping"}
+                                    {currentOrderStatus === "shipped" &&
+                                      "Your order is on its way"}
+                                    {currentOrderStatus === "delivered" &&
+                                      "Your order has been delivered"}
+                                    {currentOrderStatus === "cancelled" &&
+                                      "This order was cancelled"}
+                                  </span>
                                 </div>
+
+                                {/* Estimated delivery info */}
+                                {currentOrderStatus === "shipped" && (
+                                  <div className="text-sm text-muted-foreground mt-2">
+                                    <p>Estimated delivery: 2-3 business days</p>
+                                  </div>
+                                )}
                               </div>
 
-                              {/* Tracking info if available */}
                               {order.trackingNumber && (
-                                <div>
-                                  <h5 className="text-sm font-medium">
+                                <div className="bg-muted/30 p-3 rounded-md">
+                                  <h5 className="text-sm font-medium mb-2">
                                     Tracking Information
                                   </h5>
-                                  <div className="bg-muted/30 p-3 rounded-md mt-2">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                      <div>
-                                        <p className="text-xs text-muted-foreground">
-                                          Tracking Number
-                                        </p>
-                                        <code className="text-sm font-mono bg-muted/50 px-1 py-0.5 rounded">
-                                          {order.trackingNumber}
-                                        </code>
-                                      </div>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="text-xs h-8 flex items-center gap-1"
-                                      >
-                                        <Truck className="h-3 w-3" />
-                                        Track Package
-                                      </Button>
+                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div>
+                                      <p className="text-xs text-muted-foreground">
+                                        Tracking Number
+                                      </p>
+                                      <code className="text-sm font-mono bg-muted/50 px-1 py-0.5 rounded">
+                                        {order.trackingNumber}
+                                      </code>
                                     </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-xs h-8 flex items-center gap-1"
+                                    >
+                                      <Truck className="h-3 w-3" />
+                                      Track Package
+                                    </Button>
                                   </div>
                                 </div>
                               )}
 
-                              {/* Timeline of status changes */}
-                              {order.statusHistory &&
-                                order.statusHistory.length > 0 && (
-                                  <div>
-                                    <h5 className="text-sm font-medium mb-3">
-                                      Order Timeline
-                                    </h5>
-                                    <div className="space-y-3">
-                                      {/* Sort status history by timestamp (newest first) */}
-                                      {[...order.statusHistory]
-                                        .sort(
-                                          (a, b) =>
-                                            new Date(b.timestamp).getTime() -
-                                            new Date(a.timestamp).getTime()
-                                        )
-                                        .map((entry, idx) => (
-                                          <div
-                                            key={idx}
-                                            className="flex items-start gap-3"
-                                          >
-                                            <div
-                                              className={`h-7 w-7 rounded-full flex items-center justify-center 
-                                          ${
-                                            entry.status === "rejected"
-                                              ? "bg-red-100"
-                                              : entry.status === "verified" ||
-                                                entry.status === "delivered"
-                                              ? "bg-green-100"
-                                              : entry.status === "shipped"
-                                              ? "bg-amber-100"
-                                              : entry.status === "processing"
-                                              ? "bg-blue-100"
-                                              : "bg-gray-100"
-                                          }`}
-                                            >
-                                              {getStatusIcon(entry.status)}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                              <div className="flex justify-between">
-                                                <p className="text-sm font-medium">
-                                                  {entry.status
-                                                    .charAt(0)
-                                                    .toUpperCase() +
-                                                    entry.status.slice(1)}
-                                                </p>
-                                                <time className="text-xs text-muted-foreground">
-                                                  {formatDate(entry.timestamp)}
-                                                </time>
-                                              </div>
-                                              {entry.note && (
-                                                <p
-                                                  className={`text-xs mt-0.5 ${
-                                                    entry.status === "rejected"
-                                                      ? "text-red-600 font-medium"
-                                                      : "text-muted-foreground"
-                                                  }`}
-                                                >
-                                                  {entry.note}
-                                                </p>
-                                              )}
-                                            </div>
-                                          </div>
-                                        ))}
+                              {(order.status === "shipped" ||
+                                currentOrderStatus === "shipped") && (
+                                <div className="bg-muted/30 p-3 rounded-md">
+                                  <h5 className="text-sm font-medium mb-2">
+                                    Courier Details
+                                  </h5>
+                                  {order.delivererName &&
+                                  order.delivererPhone ? (
+                                    <div className="text-sm space-y-2">
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-muted-foreground">
+                                          Status:
+                                        </span>
+                                        <Badge
+                                          variant="outline"
+                                          className="bg-amber-100 text-amber-800 border-amber-300"
+                                        >
+                                          In Transit
+                                        </Badge>
+                                      </div>
+                                      <p>
+                                        <span className="text-muted-foreground">
+                                          Delivery Person:
+                                        </span>{" "}
+                                        <span className="font-medium">
+                                          {order.delivererName}
+                                        </span>
+                                      </p>
+                                      <p>
+                                        <span className="text-muted-foreground">
+                                          Contact:
+                                        </span>{" "}
+                                        <span className="font-medium">
+                                          {order.delivererPhone}
+                                        </span>
+                                      </p>
                                     </div>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground">
+                                      Courier details will be available once
+                                      your package is dispatched.
+                                    </p>
+                                  )}
+
+                                  {order.deliveryOtp && (
+                                    <div className="mt-3 pt-3 border-t border-border">
+                                      <p className="text-sm font-medium mb-2">
+                                        Delivery Verification Code:
+                                      </p>
+                                      <div className="bg-white border border-border rounded p-2">
+                                        <p className="font-mono font-bold text-lg text-center tracking-wider">
+                                          {order.deliveryOtp}
+                                        </p>
+                                      </div>
+                                      <p className="text-xs mt-2 text-muted-foreground">
+                                        Please provide this code to the delivery
+                                        person when your order arrives.
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="bg-muted/30 p-3 rounded-md">
+                                <h5 className="text-sm font-medium mb-2">
+                                  Shipping Details
+                                </h5>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <p className="text-muted-foreground">
+                                      Shipping Cost:
+                                    </p>
+                                    <p>
+                                      {formatPrice(order.shippingCost || 0)}
+                                    </p>
                                   </div>
-                                )}
+                                  <div>
+                                    <p className="text-muted-foreground">
+                                      Method:
+                                    </p>
+                                    <p>Standard Delivery</p>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           )}
                         </TabsContent>
@@ -1038,6 +1066,94 @@ export function OrderHistory() {
                           </div>
                         </TabsContent>
                       </Tabs>
+
+                      {/* Add Order Timeline Section */}
+                      {order.statusHistory &&
+                        order.statusHistory.length > 0 && (
+                          <div className="mt-6 pt-4 border-t">
+                            <h4 className="text-sm font-medium mb-4">
+                              Order Timeline
+                            </h4>
+                            <div className="space-y-4">
+                              {[...order.statusHistory]
+                                .sort(
+                                  (a, b) =>
+                                    new Date(b.timestamp).getTime() -
+                                    new Date(a.timestamp).getTime()
+                                )
+                                .map((entry, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-start gap-4"
+                                  >
+                                    <div
+                                      className={`h-10 w-10 rounded-full flex items-center justify-center
+                                    ${
+                                      entry.status === "rejected" ||
+                                      entry.status === "cancelled"
+                                        ? "bg-red-100"
+                                        : entry.status === "verified" ||
+                                          entry.status === "delivered"
+                                        ? "bg-green-100"
+                                        : entry.status === "shipped"
+                                        ? "bg-amber-100"
+                                        : entry.status === "processing"
+                                        ? "bg-blue-100"
+                                        : "bg-muted"
+                                    }`}
+                                    >
+                                      {entry.status === "pending" && (
+                                        <Clock className="h-5 w-5 text-yellow-500" />
+                                      )}
+                                      {entry.status === "processing" && (
+                                        <Package className="h-5 w-5 text-blue-500" />
+                                      )}
+                                      {entry.status === "shipped" && (
+                                        <Truck className="h-5 w-5 text-amber-500" />
+                                      )}
+                                      {entry.status === "delivered" && (
+                                        <CheckCircle className="h-5 w-5 text-green-500" />
+                                      )}
+                                      {entry.status === "cancelled" && (
+                                        <XCircle className="h-5 w-5 text-red-500" />
+                                      )}
+                                      {entry.status === "verified" && (
+                                        <CheckCircle className="h-5 w-5 text-green-500" />
+                                      )}
+                                      {entry.status === "rejected" && (
+                                        <AlertTriangle className="h-5 w-5 text-red-500" />
+                                      )}
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="flex justify-between items-start">
+                                        <p className="font-medium">
+                                          {entry.status
+                                            .charAt(0)
+                                            .toUpperCase() +
+                                            entry.status.slice(1)}
+                                        </p>
+                                        <time className="text-sm text-muted-foreground">
+                                          {formatDate(entry.timestamp)}
+                                        </time>
+                                      </div>
+                                      {entry.note && (
+                                        <p
+                                          className={`text-sm mt-1 ${
+                                            entry.status === "rejected" ||
+                                            entry.status === "cancelled"
+                                              ? "text-red-600"
+                                              : "text-muted-foreground"
+                                          }`}
+                                        >
+                                          {entry.note}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
 
                       {/* Support button */}
                       <div className="mt-4 pt-4 border-t">

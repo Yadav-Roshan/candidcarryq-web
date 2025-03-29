@@ -59,51 +59,62 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const user = authResult.user;
+    const userId = authResult.user.id;
 
     await connectToDatabase();
 
-    // Get orders for this user
-    const orders = await Order.find({ user: user.id })
-      .sort({ createdAt: -1 })
-      // Remove the select or expand it to include all needed fields
-      // .select(
-      //   "orderNumber items totalAmount paymentStatus orderStatus createdAt trackingNumber"
-      // )
-      .lean();
+    // Ensure we include all necessary fields in the projection, especially delivererName and delivererPhone
+    const orders = await Order.find({ user: userId })
+      .select(
+        "orderNumber createdAt totalAmount items orderStatus paymentStatus shippingAddress paymentMethod transactionRef shippingCost taxAmount discount promoCode statusHistory trackingNumber deliveryOtp delivererName delivererPhone"
+      )
+      .sort({ createdAt: -1 });
 
-    // Format the response with additional fields
-    const formattedOrders = orders.map((order: any) => ({
+    // Transform to client-friendly format
+    const formattedOrders = orders.map((order) => ({
       id: order._id.toString(),
       orderNumber: order.orderNumber,
       date: order.createdAt,
-      total: order.totalAmount,
       status: order.orderStatus,
-      paymentStatus: order.paymentStatus,
-      trackingNumber: order.trackingNumber || null,
-      // Include additional fields needed for order details
-      shippingAddress: order.shippingAddress,
-      paymentMethod: order.paymentMethod,
-      transactionRef: order.transactionRef,
-      shippingCost: order.shippingCost || 0,
-      taxAmount: order.taxAmount || 0,
-      discount: order.discount || 0,
-      promoCode: order.promoCode || null,
-      statusHistory: order.statusHistory || [],
-      // Map items as before
-      items: order.items.map((item: any) => ({
+      total: order.totalAmount,
+      items: order.items.map((item) => ({
         id: item.product.toString(),
         name: item.name,
         price: item.price,
         quantity: item.quantity,
         image: item.image,
       })),
+      shippingAddress: order.shippingAddress,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
+      transactionRef: order.transactionRef,
+      shippingCost: order.shippingCost,
+      taxAmount: order.taxAmount,
+      discount: order.discount,
+      promoCode: order.promoCode,
+      statusHistory: order.statusHistory,
+      trackingNumber: order.trackingNumber,
+      deliveryOtp: order.deliveryOtp,
+      // Ensure these fields are explicitly included in the response
+      delivererName: order.delivererName,
+      delivererPhone: order.delivererPhone,
     }));
+
+    // Add logging to help debug
+    console.log(
+      "Order with courier details:",
+      formattedOrders.find(
+        (o) => o.status === "shipped" && (o.delivererName || o.delivererPhone)
+      )
+    );
 
     return NextResponse.json({ orders: formattedOrders });
   } catch (error) {
-    console.error("Orders fetch error:", error);
-    return NextResponse.json({ message: "Server error" }, { status: 500 });
+    console.error("Error fetching orders:", error);
+    return NextResponse.json(
+      { message: "Error fetching orders" },
+      { status: 500 }
+    );
   }
 }
 

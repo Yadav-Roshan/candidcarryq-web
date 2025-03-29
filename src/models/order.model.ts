@@ -131,12 +131,20 @@ const OrderSchema = new Schema<IOrder>(
       enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
       default: "pending",
     },
-    trackingNumber: String,
+    trackingNumber: {
+      type: String,
+    },
     transactionRef: String,
     paymentProofImage: String,
-    delivererName: String,
-    delivererPhone: String,
-    deliveryOtp: String,
+    delivererName: {
+      type: String,
+    },
+    delivererPhone: {
+      type: String,
+    },
+    deliveryOtp: {
+      type: String,
+    },
     shippingCost: {
       type: Number,
       default: 0,

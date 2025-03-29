@@ -1021,26 +1021,66 @@ export default function OrderDetailPage() {
                 </div>
               </div>
 
-              {/* Deliverer Information - Show only when shipped */}
-              {order.orderStatus === "shipped" &&
-                order.delivererName &&
-                order.delivererPhone && (
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">
-                      Deliverer Information
-                    </h3>
-                    <div className="text-sm bg-muted/30 p-3 rounded-md space-y-1">
+              {/* Deliverer Information - Enhanced visibility */}
+              {order.orderStatus === "shipped" && (
+                <div>
+                  <h3 className="text-sm font-medium mb-2 flex items-center">
+                    <Truck className="h-4 w-4 text-amber-500 mr-2" />
+                    Delivery Information
+                  </h3>
+                  <div className="text-sm bg-amber-50 border border-amber-200 p-3 rounded-md space-y-2">
+                    {order.delivererName && order.delivererPhone ? (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <p className="font-medium">Courier Details:</p>
+                          <Badge
+                            variant="outline"
+                            className="bg-amber-100 text-amber-800 border-amber-300"
+                          >
+                            On the way
+                          </Badge>
+                        </div>
+                        <p>
+                          <span className="text-muted-foreground">
+                            Delivery Person:
+                          </span>{" "}
+                          <span className="font-medium">
+                            {order.delivererName}
+                          </span>
+                        </p>
+                        <p>
+                          <span className="text-muted-foreground">
+                            Contact:
+                          </span>{" "}
+                          <span className="font-medium">
+                            {order.delivererPhone}
+                          </span>
+                        </p>
+                      </>
+                    ) : (
                       <p>
-                        <span className="text-muted-foreground">Name:</span>{" "}
-                        {order.delivererName}
+                        Delivery person details will appear here once your
+                        package is dispatched.
                       </p>
-                      <p>
-                        <span className="text-muted-foreground">Phone:</span>{" "}
-                        {order.delivererPhone}
-                      </p>
-                    </div>
+                    )}
+
+                    {order.deliveryOtp && (
+                      <div className="mt-3 pt-3 border-t border-amber-200">
+                        <p className="font-medium mb-2">Delivery OTP:</p>
+                        <div className="bg-white border border-amber-300 rounded p-2">
+                          <p className="font-mono font-bold text-lg text-center tracking-wider">
+                            {order.deliveryOtp}
+                          </p>
+                        </div>
+                        <p className="text-xs mt-2 text-muted-foreground">
+                          Please provide this code to the delivery person when
+                          your order arrives.
+                        </p>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+              )}
 
               {/* Need Help */}
               <div className="bg-muted/50 p-4 rounded-md">
