@@ -48,11 +48,10 @@ export default function Header() {
   if (!mounted) {
     // You can render a placeholder with the same structure to avoid layout shift
     return (
-      <header className="sticky top-0 z-50 w-full border-b bg-black text-white">
+      <header className="w-full bg-background border-b">
         <div className="container flex h-16 items-center justify-between">
-          {/* Logo placeholder */}
           <div className="flex items-center">
-            <span className="text-xl font-bold">CandidWear</span>
+            <span className="text-xl font-bold">CandidCarryq</span>
           </div>
 
           {/* Placeholder for buttons */}
@@ -80,7 +79,7 @@ export default function Header() {
         {/* Logo */}
         <div className="flex items-center">
           <Link href="/" className="flex items-center">
-            <span className="text-xl font-bold">CandidWear</span>
+            <span className="text-xl font-bold">CandidCarryq</span>
           </Link>
         </div>
 
