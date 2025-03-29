@@ -16,7 +16,22 @@ const updateOrderSchema = z.object({
   trackingNumber: z.string().optional(),
   shippingNotes: z.string().optional(),
   adminNotes: z.string().optional(),
+  delivererName: z.string().optional(),
+  delivererPhone: z.string().optional(),
+  deliveryOtp: z.string().optional(),
+  statusHistoryEntry: z
+    .object({
+      status: z.string(),
+      timestamp: z.string(),
+      note: z.string().optional(),
+    })
+    .optional(),
 });
+
+// Generate a random 6-digit OTP
+function generateOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 // GET - Get order details
 export async function GET(
@@ -98,6 +113,47 @@ export async function PUT(
 
     const updateData = validationResult.data;
 
+    // Check if changing from processing to shipped
+    const isShipping =
+      currentOrder.orderStatus === "processing" &&
+      updateData.orderStatus === "shipped";
+
+    // Check if changing from shipped to delivered
+    const isDelivering =
+      currentOrder.orderStatus === "shipped" &&
+      updateData.orderStatus === "delivered";
+
+    // Validate deliverer details when shipping
+    if (isShipping) {
+      if (!updateData.delivererName || !updateData.delivererPhone) {
+        return NextResponse.json(
+          { message: "Deliverer name and phone number are required" },
+          { status: 400 }
+        );
+      }
+
+      // Generate OTP for delivery verification
+      updateData.deliveryOtp = generateOTP();
+    }
+
+    // Validate OTP when marking as delivered
+    if (isDelivering) {
+      if (!updateData.deliveryOtp) {
+        return NextResponse.json(
+          { message: "Delivery OTP is required" },
+          { status: 400 }
+        );
+      }
+
+      // Verify OTP
+      if (updateData.deliveryOtp !== currentOrder.deliveryOtp) {
+        return NextResponse.json(
+          { message: "Invalid OTP. Delivery cannot be confirmed." },
+          { status: 400 }
+        );
+      }
+    }
+
     // Check if payment status is changing from pending to verified
     const isVerifyingPayment =
       currentOrder.paymentStatus === "pending" &&
@@ -117,6 +173,19 @@ export async function PUT(
 
     if (updateData.trackingNumber) {
       updateOperation.$set.trackingNumber = updateData.trackingNumber;
+    }
+
+    // Add deliverer details if provided
+    if (updateData.delivererName) {
+      updateOperation.$set.delivererName = updateData.delivererName;
+    }
+
+    if (updateData.delivererPhone) {
+      updateOperation.$set.delivererPhone = updateData.delivererPhone;
+    }
+
+    if (isShipping && updateData.deliveryOtp) {
+      updateOperation.$set.deliveryOtp = updateData.deliveryOtp;
     }
 
     // Add status history entry if provided

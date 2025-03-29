@@ -26,7 +26,7 @@ interface Product {
   category?: string;
   salePrice?: number;
   stock?: number;
-  isFeatured?: boolean;
+  featured?: boolean;
   publishedDate?: string;
 }
 
@@ -42,7 +42,7 @@ export default function ProductsPage() {
     async function fetchProducts() {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/products");
+        const response = await fetch("/api/admin/products");
 
         if (!response.ok) {
           throw new Error("Failed to fetch products");
@@ -217,9 +217,11 @@ export default function ProductsPage() {
                     </TableCell>
                     <TableCell>
                       {product.isFeatured ? (
-                        <Badge className="bg-primary">Featured</Badge>
+                        <Badge className="bg-primary">Yes</Badge>
                       ) : (
-                        <span className="text-muted-foreground">No</span>
+                        <span className="text-muted-foreground">
+                          No (value: {String(product.isFeatured)})
+                        </span>
                       )}
                     </TableCell>
                     <TableCell>

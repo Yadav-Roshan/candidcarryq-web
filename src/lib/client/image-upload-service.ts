@@ -1,23 +1,15 @@
 /**
  * Client service for uploading images with next-cloudinary
  */
-import { CldUploadWidget } from "next-cloudinary";
 
 /**
- * Get a signature for authenticated Cloudinary uploads
+ * Get configuration for Cloudinary uploads (works with both signed and unsigned uploads)
  */
 export async function getUploadSignature(
   productId?: string,
   purpose?: string,
-  orderId?: string // Add orderId parameter
-): Promise<{
-  signature: string;
-  timestamp: number;
-  cloudName: string;
-  apiKey: string;
-  folder: string;
-  uploadPreset: string;
-}> {
+  orderId?: string
+): Promise<any> {
   try {
     // Get the authentication token from localStorage
     const token = localStorage.getItem("authToken");
@@ -38,7 +30,7 @@ export async function getUploadSignature(
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ productId, purpose, orderId }), // Include orderId in request
+        body: JSON.stringify({ productId, purpose, orderId }),
         credentials: "include",
         cache: "no-store",
       });
@@ -63,43 +55,47 @@ export async function getUploadSignature(
 
       const errorMessage =
         errorJson?.message || `Failed with status: ${response?.status}`;
-      console.error("Upload signature error:", errorMessage);
+      console.error("Upload configuration error:", errorMessage);
       throw new Error(errorMessage);
     }
 
     return await response.json();
   } catch (error) {
-    console.error("Error getting upload signature:", error);
+    console.error("Error getting upload configuration:", error);
     throw error;
   }
 }
 
 /**
- * Direct upload to Cloudinary using a pre-signed signature
- * This can be used for more custom upload scenarios
+ * Direct upload to Cloudinary using a pre-signed signature or unsigned upload
  */
 export async function uploadProductImage(
   file: File,
   productId?: string,
-  purpose?: string
+  purpose: string = "product_upload"
 ): Promise<{ url: string; publicId: string }> {
   try {
-    // Get upload signature
-    const { signature, timestamp, cloudName, apiKey, folder, uploadPreset } =
-      await getUploadSignature(productId, purpose);
+    const uploadConfig = await getUploadSignature(productId, purpose);
 
     // Create form data for the upload
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("api_key", apiKey);
-    formData.append("timestamp", timestamp.toString());
-    formData.append("signature", signature);
-    formData.append("folder", folder);
-    formData.append("upload_preset", uploadPreset);
+    formData.append("folder", uploadConfig.folder);
+
+    // Handle signed vs unsigned uploads
+    if (uploadConfig.uploadPreset) {
+      // Unsigned upload
+      formData.append("upload_preset", uploadConfig.uploadPreset);
+    } else {
+      // Signed upload
+      formData.append("api_key", uploadConfig.apiKey);
+      formData.append("timestamp", uploadConfig.timestamp.toString());
+      formData.append("signature", uploadConfig.signature);
+    }
 
     // Upload directly to Cloudinary
     const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      `https://api.cloudinary.com/v1_1/${uploadConfig.cloudName}/image/upload`,
       {
         method: "POST",
         body: formData,
@@ -139,22 +135,33 @@ export interface UploadWidgetConfig {
 }
 
 /**
- * Hook-like function to configure widget options with signature
+ * Get upload widget options based on whether we're using signed or unsigned uploads
  */
 export async function getUploadWidgetOptions(
   productId?: string,
   purpose?: string,
-  orderId?: string // Add orderId parameter
+  orderId?: string
 ) {
-  const { signature, timestamp, cloudName, apiKey, folder, uploadPreset } =
-    await getUploadSignature(productId, purpose, orderId);
+  const uploadConfig = await getUploadSignature(productId, purpose, orderId);
 
-  return {
-    cloudName,
-    apiKey,
-    uploadSignature: signature,
-    uploadSignatureTimestamp: timestamp,
-    folder,
-    uploadPreset,
+  // Build options object based on the response
+  const options: any = {
+    cloudName: uploadConfig.cloudName,
+    apiKey: uploadConfig.apiKey,
+    folder: uploadConfig.folder,
+    sources: ["local", "url", "camera"],
+    multiple: false,
+    maxFiles: 1,
   };
+
+  // Add upload preset for unsigned uploads
+  if (uploadConfig.uploadPreset) {
+    options.uploadPreset = uploadConfig.uploadPreset;
+  } else {
+    // Add signature for signed uploads
+    options.uploadSignature = uploadConfig.signature;
+    options.uploadSignatureTimestamp = uploadConfig.timestamp;
+  }
+
+  return options;
 }

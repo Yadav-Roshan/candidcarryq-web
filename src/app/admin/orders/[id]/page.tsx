@@ -117,6 +117,11 @@ export default function AdminOrderDetailPage() {
   const [statusToReject, setStatusToReject] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("payment"); // Set active tab for status management
 
+  // Add new states for deliverer details and OTP
+  const [delivererName, setDelivererName] = useState("");
+  const [delivererPhone, setDelivererPhone] = useState("");
+  const [deliveryOtp, setDeliveryOtp] = useState("");
+
   // Move fetchOrder outside useEffect so it can be called from other functions
   const fetchOrder = async () => {
     try {
@@ -213,7 +218,7 @@ export default function AdminOrderDetailPage() {
     }
   };
 
-  // Modified updateOrderStatus function - no longer needs to check for tracking number
+  // Modified updateOrderStatus function to include delivery information
   const updateOrderStatus = async (
     statusType: "paymentStatus" | "orderStatus",
     value: string,
@@ -230,9 +235,6 @@ export default function AdminOrderDetailPage() {
       let updateData: any = {};
       updateData[statusType] = value;
 
-      // Tracking number will be generated on the server side
-      // No need to handle it here anymore
-
       // FIXED: Create a status history entry to add (not replace)
       const newStatusEntry = {
         status: value,
@@ -241,6 +243,35 @@ export default function AdminOrderDetailPage() {
       };
 
       updateData.statusHistoryEntry = newStatusEntry;
+
+      // Add deliverer information when shipping
+      if (statusType === "orderStatus" && value === "shipped") {
+        if (!delivererName || !delivererPhone) {
+          toast({
+            title: "Missing Information",
+            description: "Please enter deliverer name and phone number",
+            variant: "destructive",
+          });
+          setIsUpdating(false);
+          return;
+        }
+        updateData.delivererName = delivererName;
+        updateData.delivererPhone = delivererPhone;
+      }
+
+      // Add OTP verification when delivering
+      if (statusType === "orderStatus" && value === "delivered") {
+        if (!deliveryOtp) {
+          toast({
+            title: "Missing Information",
+            description: "Please enter the delivery OTP",
+            variant: "destructive",
+          });
+          setIsUpdating(false);
+          return;
+        }
+        updateData.deliveryOtp = deliveryOtp;
+      }
 
       const response = await fetch(`/api/orders/${orderId}`, {
         method: "PUT",
@@ -252,7 +283,8 @@ export default function AdminOrderDetailPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update order status");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update order status");
       }
 
       const data = await response.json();
@@ -265,6 +297,12 @@ export default function AdminOrderDetailPage() {
         } has been marked as ${value}`,
       });
 
+      // Reset form fields after successful update
+      setDelivererName("");
+      setDelivererPhone("");
+      setDeliveryOtp("");
+      setNote("");
+
       // If payment was verified, refresh the page to update stock information
       if (statusType === "paymentStatus" && value === "verified") {
         fetchOrder();
@@ -273,7 +311,10 @@ export default function AdminOrderDetailPage() {
       console.error("Error updating order status:", error);
       toast({
         title: "Update Failed",
-        description: "Could not update the order status",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Could not update the order status",
         variant: "destructive",
       });
     } finally {
@@ -724,6 +765,51 @@ export default function AdminOrderDetailPage() {
                           </p>
                         </div>
                       )}
+
+                    {/* Deliverer information if shipped */}
+                    {(order.orderStatus === "shipped" ||
+                      order.orderStatus === "delivered") &&
+                      order.delivererName &&
+                      order.delivererPhone && (
+                        <div className="mt-6 p-3 bg-muted/50 rounded-lg">
+                          <h4 className="font-medium mb-2">
+                            Deliverer Information
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-1">
+                                Deliverer Name
+                              </p>
+                              <p className="font-medium">
+                                {order.delivererName}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-1">
+                                Contact Number
+                              </p>
+                              <p className="font-medium">
+                                {order.delivererPhone}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Delivery OTP if shipped and not delivered */}
+                    {order.orderStatus === "shipped" && order.deliveryOtp && (
+                      <div className="mt-6 p-3 bg-muted/50 rounded-lg">
+                        <h4 className="font-medium mb-2">
+                          Delivery Verification Code
+                        </h4>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Customer needs to provide this code to the deliverer
+                        </p>
+                        <p className="font-medium text-xl font-mono tracking-wider">
+                          {order.deliveryOtp}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Order Status Actions */}
@@ -734,6 +820,63 @@ export default function AdminOrderDetailPage() {
                         <h3 className="font-medium mb-4">
                           Update Order Status
                         </h3>
+
+                        {/* Deliverer information form when shipping */}
+                        {order.orderStatus === "processing" && (
+                          <div className="space-y-3 mb-4">
+                            <div>
+                              <Label htmlFor="delivererName">
+                                Deliverer Name
+                              </Label>
+                              <Input
+                                id="delivererName"
+                                placeholder="Enter deliverer name"
+                                value={delivererName}
+                                onChange={(e) =>
+                                  setDelivererName(e.target.value)
+                                }
+                                className="mt-1"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="delivererPhone">
+                                Deliverer Phone Number
+                              </Label>
+                              <Input
+                                id="delivererPhone"
+                                placeholder="Enter deliverer phone number"
+                                value={delivererPhone}
+                                onChange={(e) =>
+                                  setDelivererPhone(e.target.value)
+                                }
+                                className="mt-1"
+                                required
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* OTP verification when delivering */}
+                        {order.orderStatus === "shipped" && (
+                          <div className="space-y-3 mb-4">
+                            <div>
+                              <Label htmlFor="deliveryOtp">Delivery OTP</Label>
+                              <Input
+                                id="deliveryOtp"
+                                placeholder="Enter OTP provided by customer"
+                                value={deliveryOtp}
+                                onChange={(e) => setDeliveryOtp(e.target.value)}
+                                className="mt-1"
+                                required
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Ask the customer for their delivery verification
+                                code
+                              </p>
+                            </div>
+                          </div>
+                        )}
 
                         <div className="mb-3">
                           <Label htmlFor="statusNote">

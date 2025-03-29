@@ -37,6 +37,9 @@ export interface IOrder extends Document {
   trackingNumber?: string;
   transactionRef?: string;
   paymentProofImage?: string;
+  delivererName?: string;
+  delivererPhone?: string;
+  deliveryOtp?: string;
   shippingCost: number;
   taxAmount: number;
   discount?: number;
@@ -131,6 +134,9 @@ const OrderSchema = new Schema<IOrder>(
     trackingNumber: String,
     transactionRef: String,
     paymentProofImage: String,
+    delivererName: String,
+    delivererPhone: String,
+    deliveryOtp: String,
     shippingCost: {
       type: Number,
       default: 0,

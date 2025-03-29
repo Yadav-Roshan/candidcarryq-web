@@ -13,31 +13,39 @@ export const metadata: Metadata = {
   description: "Browse products by category",
 };
 
-// Define valid categories
-const validCategories = [
-  "backpacks",
-  "handbags",
-  "wallets",
-  "travel",
-  "accessories",
-];
-
 export default async function CategoriesPage() {
   // Get all products from database
   const allProducts = await getAllProducts();
 
-  // Group products by category
-  const groupedProducts = validCategories.reduce((acc, category) => {
-    acc[category] = allProducts.filter(
-      (product) => product.category === category
-    );
-    return acc;
-  }, {} as Record<string, any[]>);
+  // Extract unique categories and normalize them
+  const categoriesMap = new Map();
 
-  // Get categories that have products
-  const categoriesWithProducts = validCategories.filter(
-    (category) => groupedProducts[category].length > 0
-  );
+  allProducts.forEach((product) => {
+    if (product.category) {
+      // Normalize category to lowercase
+      const normalizedCategory = product.category.toLowerCase().trim();
+
+      // Skip empty categories
+      if (!normalizedCategory) return;
+
+      // If this normalized category isn't in our map yet, add it with the original case preserved
+      if (!categoriesMap.has(normalizedCategory)) {
+        categoriesMap.set(normalizedCategory, {
+          normalized: normalizedCategory,
+          display: product.category, // Keep original case for display
+          products: [],
+        });
+      }
+
+      // Add product to this category
+      categoriesMap.get(normalizedCategory).products.push(product);
+    }
+  });
+
+  // Convert map to array for easier iteration
+  const categoriesWithProducts = Array.from(categoriesMap.values())
+    .filter((cat) => cat.products.length > 0)
+    .sort((a, b) => a.display.localeCompare(b.display)); // Sort alphabetically
 
   // If no products found at all
   if (categoriesWithProducts.length === 0) {
@@ -55,12 +63,14 @@ export default async function CategoriesPage() {
 
       <div className="space-y-12">
         {categoriesWithProducts.map((category) => (
-          <div key={category} className="space-y-4">
+          <div key={category.normalized} className="space-y-4">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold capitalize">{category}</h2>
+              <h2 className="text-2xl font-semibold capitalize">
+                {category.display}
+              </h2>
               <Button variant="outline" asChild>
                 <Link
-                  href={`/categories/${category}`}
+                  href={`/categories/${category.normalized}`}
                   className="flex items-center gap-2"
                 >
                   View All <ArrowRight className="h-4 w-4" />
@@ -70,7 +80,7 @@ export default async function CategoriesPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               <Suspense fallback={<ProductSkeletons count={4} />}>
-                {groupedProducts[category].slice(0, 4).map((product) => (
+                {category.products.slice(0, 4).map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </Suspense>

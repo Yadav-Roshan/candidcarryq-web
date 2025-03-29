@@ -23,6 +23,7 @@ export function verifyToken(token: string) {
 
 // Ensure this function properly checks and resolves with the user
 export async function authenticate(req: NextRequest) {
+  console.log(req);
   const token = getToken(req);
   if (!token) {
     return { status: 401, message: "No token provided" };
@@ -60,7 +61,12 @@ export async function authenticate(req: NextRequest) {
   }
 }
 
-// Check if user is admin
+// Refine the isAdmin function to handle different user object formats
 export function isAdmin(user: any) {
-  return user?.role === "admin";
+  // Check if user has role property and it equals 'admin'
+  if (!user) return false;
+
+  // Handle both object formats (direct property or nested in user property)
+  const role = user.role || user.user?.role;
+  return role === "admin";
 }

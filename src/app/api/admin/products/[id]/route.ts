@@ -3,10 +3,9 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/product.model";
 import { authenticate, isAdmin } from "@/middleware/auth.middleware";
 import { z } from "zod";
-import mongoose from "mongoose";
 import { deleteImage, deleteMultipleImages } from "@/lib/cloudinary";
 
-// Update the product schema validation for updates
+// Schema for updating product
 const updateProductSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").optional(),
   description: z
@@ -34,84 +33,84 @@ const updateProductSchema = z.object({
   weight: z.string().optional(),
   capacity: z.string().optional(),
   fullDescription: z.string().optional(),
-  featured: z.boolean().optional(),
+  featured: z.boolean().optional(), // Changed from isFeatured to featured
   stock: z
     .number()
     .int()
     .nonnegative("Stock must be a non-negative integer")
     .optional(),
+  warranty: z.string().optional(),
+  returnPolicy: z.string().optional(),
 });
 
-// Check if ID is a valid MongoDB ObjectId
-function isValidObjectId(id: string): boolean {
-  return mongoose.Types.ObjectId.isValid(id);
-}
-
-// GET - Get single product (public)
+// GET - Get single product (admin only)
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } | Promise<{ id: string }> }
 ) {
   try {
-    // Resolve params if it's a Promise
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const { id } = resolvedParams;
-
     await connectToDatabase();
 
-    // Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    // Authentication middleware
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200) {
       return NextResponse.json(
-        { message: "Invalid product ID format" },
-        { status: 400 }
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status }
       );
     }
 
-    // Find product in database
+    // Admin check
+    if (!isAdmin(authResult.user)) {
+      return NextResponse.json(
+        { message: "Access denied - Admin only" },
+        { status: 403 }
+      );
+    }
+
+    // Resolve params if it's a Promise
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const id = resolvedParams.id;
+
     const product = await Product.findById(id);
 
     if (!product) {
-      // Don't fall back to mock data, just return a 404
       return NextResponse.json(
         { message: "Product not found" },
         { status: 404 }
       );
     }
 
-    // Return the found product
-    return NextResponse.json({
-      product: {
-        id: product._id.toString(),
-        name: product.name,
-        price: product.price,
-        image: product.image,
-        description: product.description,
-        category: product.category,
-        salePrice: product.salePrice,
-        rating: product.rating,
-        reviewCount: product.reviewCount,
-        stock: product.stock,
-        featured: product.featured, // Changed from isFeatured to featured
-        images: product.images,
-        imagePublicIds: product.imagePublicIds,
-        material: product.material,
-        dimensions: product.dimensions,
-        weight: product.weight,
-        capacity: product.capacity,
-        colors: product.colors,
-        sizes: product.sizes,
-        fullDescription: product.fullDescription,
-        warranty: product.warranty,
-        returnPolicy: product.returnPolicy,
-      },
-    });
+    // Create the product response with guaranteed values for warranty and returnPolicy
+    const productData = {
+      id: product._id.toString(),
+      name: product.name,
+      description: product.description,
+      fullDescription: product.fullDescription,
+      price: product.price,
+      salePrice: product.salePrice,
+      category: product.category,
+      image: product.image,
+      images: product.images,
+      imagePublicIds: product.imagePublicIds,
+      colors: product.colors,
+      sizes: product.sizes,
+      material: product.material,
+      dimensions: product.dimensions,
+      weight: product.weight,
+      capacity: product.capacity,
+      rating: product.rating,
+      reviewCount: product.reviewCount,
+      stock: product.stock,
+      featured: product.featured, // Changed from isFeatured to featured
+      warranty: product.warranty !== undefined ? product.warranty : "",
+      returnPolicy:
+        product.returnPolicy !== undefined ? product.returnPolicy : "",
+    };
+
+    return NextResponse.json({ product: productData });
   } catch (error) {
-    console.error(
-      `Error fetching product ${
-        params instanceof Promise ? await params.then((p) => p.id) : params.id
-      }:`,
-      error
-    );
+    console.error(`Error fetching product ${params.id}:`, error);
     return NextResponse.json(
       { message: "Error fetching product" },
       { status: 500 }
@@ -125,33 +124,28 @@ export async function PUT(
   { params }: { params: { id: string } | Promise<{ id: string }> }
 ) {
   try {
-    // Resolve params if it's a Promise
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const { id } = resolvedParams;
-
-    // Ensure id is valid
-    if (!id) {
-      return NextResponse.json(
-        { message: "Product ID is required" },
-        { status: 400 }
-      );
-    }
-
     await connectToDatabase();
 
     // Authentication middleware
-    const user = await authenticate(request);
-
-    // Check if authentication was successful
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status }
+      );
     }
 
-    // Admin check - log the user role to debug
-    console.log("User role:", user.role);
-    if (user.role !== "admin") {
-      return NextResponse.json({ message: "Access denied" }, { status: 403 });
+    // Admin check
+    if (!isAdmin(authResult.user)) {
+      return NextResponse.json(
+        { message: "Access denied - Admin only" },
+        { status: 403 }
+      );
     }
+
+    // Resolve params if it's a Promise
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const id = resolvedParams.id;
 
     // Parse and validate request body
     const body = await request.json();
@@ -167,7 +161,7 @@ export async function PUT(
       );
     }
 
-    // Get the product to check if we need to delete old images
+    // Get existing product for image cleanup
     const existingProduct = await Product.findById(id);
     if (!existingProduct) {
       return NextResponse.json(
@@ -176,7 +170,7 @@ export async function PUT(
       );
     }
 
-    // If we're updating images and have old image public IDs, delete those from Cloudinary
+    // Handle image deletion if needed
     if (
       validationResult.data.images &&
       existingProduct.imagePublicIds?.length > 0
@@ -191,22 +185,22 @@ export async function PUT(
         console.log(
           `Deleting ${toDelete.length} unused images from Cloudinary`
         );
-        // Use batch delete for efficiency
         await deleteMultipleImages(toDelete.filter((id) => id));
       }
     }
 
-    // Find and update product - no mapping needed
+    // Create update data without mapping
     const updateData = {
       ...validationResult.data,
+      // No isFeatured to featured mapping needed
     };
 
-    const product = await Product.findByIdAndUpdate(id, updateData, {
+    // Update the product
+    const updatedProduct = await Product.findByIdAndUpdate(id, updateData, {
       new: true,
-      runValidators: true,
     });
 
-    if (!product) {
+    if (!updatedProduct) {
       return NextResponse.json(
         { message: "Product not found" },
         { status: 404 }
@@ -216,29 +210,28 @@ export async function PUT(
     return NextResponse.json({
       message: "Product updated successfully",
       product: {
-        id: product._id.toString(),
-        name: product.name,
-        price: product.price,
-        image: product.image,
-        description: product.description,
-        category: product.category,
-        salePrice: product.salePrice,
-        rating: product.rating,
-        reviewCount: product.reviewCount,
-        stock: product.stock,
-        featured: product.featured,
-        images: product.images,
-        imagePublicIds: product.imagePublicIds,
-        material: product.material,
-        dimensions: product.dimensions,
-        weight: product.weight,
-        capacity: product.capacity,
-        colors: product.colors,
-        sizes: product.sizes,
-        fullDescription: product.fullDescription,
-        publishedDate: product.publishedDate,
-        warranty: product.warranty,
-        returnPolicy: product.returnPolicy,
+        id: updatedProduct._id.toString(),
+        name: updatedProduct.name,
+        price: updatedProduct.price,
+        image: updatedProduct.image,
+        description: updatedProduct.description,
+        category: updatedProduct.category,
+        salePrice: updatedProduct.salePrice,
+        rating: updatedProduct.rating,
+        reviewCount: updatedProduct.reviewCount,
+        stock: updatedProduct.stock,
+        featured: updatedProduct.featured, // Changed from isFeatured to featured
+        images: updatedProduct.images,
+        imagePublicIds: updatedProduct.imagePublicIds,
+        material: updatedProduct.material,
+        dimensions: updatedProduct.dimensions,
+        weight: updatedProduct.weight,
+        capacity: updatedProduct.capacity,
+        colors: updatedProduct.colors,
+        sizes: updatedProduct.sizes,
+        fullDescription: updatedProduct.fullDescription,
+        warranty: updatedProduct.warranty,
+        returnPolicy: updatedProduct.returnPolicy,
       },
     });
   } catch (error) {
@@ -253,32 +246,30 @@ export async function DELETE(
   { params }: { params: { id: string } | Promise<{ id: string }> }
 ) {
   try {
-    // Resolve params if it's a Promise
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const { id } = resolvedParams;
-
-    // Ensure id is valid
-    if (!id) {
-      return NextResponse.json(
-        { message: "Product ID is required" },
-        { status: 400 }
-      );
-    }
-
     await connectToDatabase();
 
     // Authentication middleware
-    const user = await authenticate(request);
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status }
+      );
     }
 
     // Admin check
-    if (!isAdmin(user)) {
-      return NextResponse.json({ message: "Access denied" }, { status: 403 });
+    if (!isAdmin(authResult.user)) {
+      return NextResponse.json(
+        { message: "Access denied - Admin only" },
+        { status: 403 }
+      );
     }
 
-    // Find the product to get image IDs for deletion
+    // Resolve params if it's a Promise
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const id = resolvedParams.id;
+
+    // Find the product
     const product = await Product.findById(id);
     if (!product) {
       return NextResponse.json(
@@ -289,11 +280,7 @@ export async function DELETE(
 
     // Delete images from Cloudinary
     if (product.imagePublicIds && product.imagePublicIds.length > 0) {
-      for (const publicId of product.imagePublicIds) {
-        if (publicId) {
-          await deleteImage(publicId);
-        }
-      }
+      await deleteMultipleImages(product.imagePublicIds.filter(Boolean));
     }
 
     // Delete the product
