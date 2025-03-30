@@ -1,248 +1,215 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
-import { Heart, ShoppingCart, Star, StarHalf, Eye } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import { Product } from "@/lib/client/product-service";
+import { formatPrice } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StarRating } from "@/components/ui/star-rating";
 import { Badge } from "@/components/ui/badge";
-import { cn, formatPrice } from "@/lib/utils";
-import { useWishlist } from "@/contexts/wishlist-context";
-import { useCart } from "@/contexts/cart-context";
+import { Button } from "@/components/ui/button";
+import { Eye, ShoppingCart } from "lucide-react";
+import { CartButton } from "@/components/cart/cart-button";
+import { WishlistButton } from "@/components/wishlist/wishlist-button";
+import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/components/ui/use-toast";
 
-export interface ProductCardProps {
-  id: string;
-  name: string;
-  price: number;
-  category?: string;
-  image?: string;
-  salePrice?: number;
-  rating?: number;
-  reviewCount?: number;
-  stock?: number;
-  description?: string;
-}
+type ProductCardProps =
+  | {
+      product: Product;
+    }
+  | {
+      id: string;
+      name: string;
+      price: number;
+      image: string;
+      category?: string;
+      salePrice?: number;
+      rating?: number;
+      reviewCount?: number;
+      stock?: number;
+      description?: string;
+    };
 
-export function ProductCard({
-  id,
-  name,
-  price,
-  category,
-  image = "https://placehold.co/600x400?text=No+Image",
-  salePrice,
-  rating = 0,
-  reviewCount = 0,
-  stock = 0,
-  description,
-}: ProductCardProps) {
-  const {
-    addItem: addToWishlist,
-    removeItem: removeFromWishlist,
-    isItemInWishlist,
-  } = useWishlist();
-  const { addToCart } = useCart();
+export function ProductCard(props: ProductCardProps) {
+  // Handle both prop types (direct properties or product object)
+  const product = "product" in props ? props.product : props;
+  // Change this line to use user directly instead of isAuthenticated
+  const { user } = useAuth();
   const { toast } = useToast();
-  const isWishlisted = isItemInWishlist(id);
 
-  const discountPercentage = salePrice
-    ? Math.round(((price - salePrice) / price) * 100)
-    : 0;
+  const {
+    id,
+    name,
+    price,
+    image,
+    category,
+    salePrice,
+    rating = 0, // Default to 0 if no rating
+    reviewCount = 0, // Default to 0 if no review count
+    stock, // Remove the default value of 0
+  } = product;
 
-  const handleWishlistToggle = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  // Change how we determine if an item is out of stock
+  // Only consider it out of stock if stock is explicitly set to 0
+  const isOutOfStock = typeof stock === "number" && stock <= 0;
+  const discountPercentage =
+    salePrice && price ? Math.round(((price - salePrice) / price) * 100) : 0;
 
-    if (isWishlisted) {
-      removeFromWishlist(id);
+  const handleWishlistClick = () => {
+    // Change this line to check for user existence
+    if (!user) {
       toast({
-        title: "Removed from wishlist",
-        description: `${name} has been removed from your wishlist`,
-      });
-    } else {
-      addToWishlist({
-        id,
-        name,
-        price,
-        image,
-        category,
-        salePrice,
-      });
-      toast({
-        title: "Added to wishlist",
-        description: `${name} has been added to your wishlist`,
+        title: "Authentication required",
+        description: "Please sign in to add items to your wishlist",
+        variant: "destructive",
       });
     }
-  };
-
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    addToCart({
-      id,
-      name,
-      price: salePrice || price,
-      image,
-      quantity: 1,
-    });
-
-    toast({
-      title: "Added to cart",
-      description: `${name} has been added to your cart`,
-    });
-  };
-
-  const handleNavigate = (e: React.MouseEvent, path: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Use router or window.location to navigate
-    window.location.href = path;
-  };
-
-  const renderRatingStars = (rating: number) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 >= 0.5;
-
-    // Add full stars
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(
-        <Star
-          key={`star-${i}`}
-          className="h-4 w-4 fill-yellow-400 text-yellow-400"
-        />
-      );
-    }
-
-    // Add half star if needed
-    if (hasHalfStar) {
-      stars.push(
-        <StarHalf
-          key="half-star"
-          className="h-4 w-4 fill-yellow-400 text-yellow-400"
-        />
-      );
-    }
-
-    // Add empty stars
-    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-    for (let i = 0; i < emptyStars; i++) {
-      stars.push(
-        <Star
-          key={`empty-star-${i}`}
-          className="h-4 w-4 text-muted-foreground"
-        />
-      );
-    }
-
-    return stars;
   };
 
   return (
-    <div className="group relative overflow-hidden rounded-lg border bg-background shadow-sm transition-colors hover:shadow-md">
-      {/* Wishlist button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className={cn(
-          "absolute right-2 top-2 z-10 h-8 w-8 rounded-full bg-white/80 shadow-sm transition-colors hover:bg-white dark:bg-black/80 dark:hover:bg-black",
-          isWishlisted && "text-red-500"
+    <Card className="overflow-hidden group border border-border transition-all hover:border-primary/20 hover:shadow-md h-full flex flex-col">
+      <div className="relative aspect-square overflow-hidden bg-muted">
+        {/* Sale badge */}
+        {salePrice && salePrice < price && (
+          <Badge className="absolute top-2 right-2 z-10 bg-red-500">
+            {discountPercentage}% OFF
+          </Badge>
         )}
-        onClick={handleWishlistToggle}
-      >
-        <Heart className={cn("h-4 w-4", isWishlisted && "fill-current")} />
-        <span className="sr-only">
-          {isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-        </span>
-      </Button>
 
-      {/* Product content - now using a div instead of a Link */}
-      <div
-        className="flex flex-col"
-        onClick={(e) => handleNavigate(e, `/products/${id}`)}
-      >
-        {/* Product image */}
-        <div className="relative aspect-square overflow-hidden rounded-t-lg bg-muted cursor-pointer">
-          <img
+        {/* Out of stock overlay - modified to not block interactions */}
+        {isOutOfStock && (
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center pointer-events-none">
+            <Badge
+              variant="outline"
+              className="text-destructive border-destructive"
+            >
+              Out of Stock
+            </Badge>
+          </div>
+        )}
+
+        {/* Product image with proper sizing */}
+        {image ? (
+          <Image
             src={image}
             alt={name}
-            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover transition-all group-hover:scale-105"
+            priority={false}
           />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-muted">
+            <span className="text-muted-foreground">No image</span>
+          </div>
+        )}
 
-          {salePrice && (
-            <Badge className="absolute left-2 top-2 bg-red-500 text-white">
-              {discountPercentage}% OFF
-            </Badge>
-          )}
+        {/* Wishlist button - ensure higher z-index and proper styling */}
+        <div
+          className="absolute top-2 left-2 z-30"
+          onClick={handleWishlistClick}
+        >
+          <WishlistButton
+            productId={id}
+            productName={name}
+            productPrice={price}
+            productImage={image}
+            productCategory={category}
+            productSalePrice={salePrice}
+            productStock={stock} // Pass stock information
+            size="sm"
+            requireAuth={true}
+          />
         </div>
 
-        {/* Product info */}
-        <div className="flex flex-1 flex-col p-4">
-          <h3 className="font-medium truncate cursor-pointer">{name}</h3>
+        {/* Quick view overlay with button - ensure higher z-index than out-of-stock overlay */}
+        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
+          <Link href={`/products/${id}`}>
+            <Button variant="secondary" size="sm" className="gap-2">
+              <Eye className="h-4 w-4" />
+              Quick View
+            </Button>
+          </Link>
+        </div>
+      </div>
 
-          {category && (
-            <p className="text-xs text-muted-foreground capitalize">
+      <CardContent className="p-4 flex flex-col flex-grow">
+        {/* Product category */}
+        {category && (
+          <div className="mb-1">
+            <Link
+              href={`/categories/${category}`}
+              className="text-xs text-muted-foreground hover:text-primary capitalize"
+            >
               {category}
-            </p>
-          )}
+            </Link>
+          </div>
+        )}
 
-          {/* Rating stars */}
-          {rating > 0 && (
-            <div className="mt-2 flex items-center">
-              <div className="flex">{renderRatingStars(rating)}</div>
-              {reviewCount > 0 && (
-                <span className="ml-2 text-xs text-muted-foreground">
-                  ({reviewCount})
-                </span>
-              )}
-            </div>
-          )}
+        {/* Product name */}
+        <Link href={`/products/${id}`} className="block">
+          <h3 className="font-medium text-base line-clamp-1 hover:underline hover:underline-offset-2 mb-1">
+            {name}
+          </h3>
+        </Link>
 
-          <div className="mt-4 flex items-center">
+        {/* Star rating - show for all products including those with 0 rating */}
+        <div className="flex items-center gap-1 mb-2">
+          <StarRating rating={rating} size="sm" />
+          <span className="text-xs text-muted-foreground ml-1">
+            {rating.toFixed(1)}
+            {reviewCount > 0 ? ` (${reviewCount})` : " (No reviews)"}
+          </span>
+        </div>
+
+        {/* Price and add to cart - push to bottom with flex */}
+        <div className="flex items-center justify-between mt-auto pt-2">
+          <div>
             {salePrice ? (
-              <>
-                <p className="font-medium text-green-600 dark:text-green-400">
+              <div className="flex flex-col">
+                <span className="font-medium text-destructive">
                   {formatPrice(salePrice)}
-                </p>
-                <p className="ml-2 text-sm text-muted-foreground line-through">
+                </span>
+                <span className="text-sm text-muted-foreground line-through">
                   {formatPrice(price)}
-                </p>
-              </>
-            ) : (
-              <p className="font-medium">{formatPrice(price)}</p>
-            )}
-          </div>
-
-          {/* Action buttons container - shown on hover or focus */}
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={(e) => handleNavigate(e, `/products/${id}`)}
-            >
-              <Eye className="mr-1 h-3 w-3" /> View
-            </Button>
-
-            <Button
-              variant="default"
-              size="sm"
-              className="w-full"
-              onClick={handleAddToCart}
-              disabled={stock === 0}
-            >
-              <ShoppingCart className="mr-1 h-3 w-3" /> Cart
-            </Button>
-
-            {stock === 0 && (
-              <div className="col-span-2 mt-2 text-center text-xs text-destructive">
-                Out of stock
+                </span>
               </div>
+            ) : (
+              <span className="font-medium">{formatPrice(price)}</span>
             )}
           </div>
+
+          {/* Add to cart button - fixed width to prevent wrapping */}
+          <CartButton
+            product={product}
+            variant="default"
+            size="sm"
+            disabled={isOutOfStock}
+            className="whitespace-nowrap min-w-[80px]"
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Add skeleton component for loading states
+ProductCard.Skeleton = function ProductCardSkeleton() {
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <div className="aspect-square relative bg-muted">
+        <Skeleton className="h-full w-full" />
+      </div>
+      <div className="p-4">
+        <Skeleton className="h-4 w-2/3 mb-2" />
+        <Skeleton className="h-4 w-1/2 mb-4" />
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-5 w-16" />
+          <Skeleton className="h-8 w-8 rounded-full" />
         </div>
       </div>
     </div>
   );
-}
+};

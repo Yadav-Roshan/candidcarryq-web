@@ -1,5 +1,3 @@
-// Assuming you have a product-list.tsx file, if not, create one
-
 import { Product } from "@/lib/client/product-service";
 import { ProductCard } from "./product-card";
 import { NoProducts } from "./no-products";

@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Update cart
+      // Update cart if item exists
       const updatedUser = await User.findOneAndUpdate(
         { _id: user.id, "cart.productId": productId },
         {
@@ -203,11 +203,15 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // Add this missing return statement for the update case
       return NextResponse.json({
         message: "Cart updated successfully",
         cartCount: updatedUser.cart.length,
       });
     }
+
+    // If we reached here without returning, it's likely the array case
+    // Make sure there's a proper return at the end of the array case too
   } catch (error) {
     console.error("Cart update error:", error);
     return NextResponse.json({ message: "Server error" }, { status: 500 });

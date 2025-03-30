@@ -17,13 +17,19 @@ export default function LoginPage() {
 
   const [error, setError] = useState<string | null>(null);
 
+  // For debugging - log the return URL
+  useEffect(() => {
+    console.log("Login page loaded with return URL:", returnTo);
+  }, [returnTo]);
+
   // Check if already logged in
   useEffect(() => {
     if (user && !isLoading) {
-      // If user is already logged in, redirect to account page
-      router.push("/account");
+      console.log("User already logged in, redirecting to:", returnTo);
+      // If user is already logged in, redirect to the return URL
+      router.push(returnTo);
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, router, returnTo]);
 
   useEffect(() => {
     if (errorParam) {
@@ -77,7 +83,7 @@ export default function LoginPage() {
     return (
       <div className="container flex flex-col items-center py-16">
         <div className="w-full max-w-md space-y-8 text-center">
-          <p>You are already logged in. Redirecting...</p>
+          <p>You are already logged in. Redirecting to {returnTo}...</p>
         </div>
       </div>
     );

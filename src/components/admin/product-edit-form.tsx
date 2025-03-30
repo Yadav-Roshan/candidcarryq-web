@@ -49,16 +49,9 @@ const productSchema = z.object({
   image: z.string().optional(), // Remove URL validation here
   colors: z.array(z.string()).default([]),
   sizes: z.array(z.string()).default([]),
+  warranty: z.string().optional(), // Add warranty field
+  returnPolicy: z.string().optional(), // Add return policy field
 });
-
-// Available categories
-const categories = [
-  { value: "backpacks", label: "Backpacks" },
-  { value: "handbags", label: "Handbags" },
-  { value: "wallets", label: "Wallets" },
-  { value: "travel", label: "Travel" },
-  { value: "accessories", label: "Accessories" },
-];
 
 interface ProductEditFormProps {
   product?: ProductDetail;
@@ -114,6 +107,8 @@ export function ProductEditForm({
       image: "",
       colors: product?.colors || [],
       sizes: product?.sizes || [],
+      warranty: product?.warranty || "", // Add warranty field
+      returnPolicy: product?.returnPolicy || "", // Add return policy field
     },
   });
 
@@ -155,7 +150,6 @@ export function ProductEditForm({
       });
     } catch (error) {
       console.error("Error initializing upload options:", error);
-
       // Check specifically for unauthorized errors
       if (error instanceof Error && error.message.includes("401")) {
         toast({
@@ -248,7 +242,6 @@ export function ProductEditForm({
     setColorInput("");
   };
 
-  // Remove color from the array
   const removeColor = (color: string) => {
     const currentColors = form.getValues("colors") || [];
     form.setValue(
@@ -267,7 +260,6 @@ export function ProductEditForm({
     setSizeInput("");
   };
 
-  // Remove size from the array
   const removeSize = (size: string) => {
     const currentSizes = form.getValues("sizes") || [];
     form.setValue(
@@ -302,9 +294,15 @@ export function ProductEditForm({
         return;
       }
 
+      // Normalize category to lowercase before submission
+      const normalizedValues = {
+        ...values,
+        category: values.category.trim().toLowerCase(),
+      };
+
       // Submit the form with all data
       await onSubmit({
-        ...values,
+        ...normalizedValues,
         images: validImages.map((img) => img.url),
         imagePublicIds: validImages.map((img) => img.publicId),
         // Make sure to include the main image
@@ -388,20 +386,13 @@ export function ProductEditForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.value} value={category.value}>
-                          {category.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <Input placeholder="e.g. backpacks, handbags" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Enter a category for your product (will be normalized to
+                    lowercase)
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -479,7 +470,6 @@ export function ProductEditForm({
                           Add
                         </Button>
                       </div>
-
                       <div className="flex flex-wrap gap-2 mt-2">
                         {field.value?.map((color, index) => (
                           <Badge
@@ -500,6 +490,7 @@ export function ProductEditForm({
                   <FormDescription>
                     Enter available colors one at a time
                   </FormDescription>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -548,11 +539,12 @@ export function ProductEditForm({
                             </Button>
                           </div>
                         ))}
-
                         {/* Upload Button - show only if less than MAX_IMAGES */}
                         {productImages.length < MAX_IMAGES && uploadOptions && (
                           <CldUploadWidget
                             options={uploadOptions}
+                            onUpload={() => setIsUploading(true)}
+                            onComplete={() => setIsUploading(false)}
                             onSuccess={(result) => {
                               if (result?.info) {
                                 handleImageUpload(
@@ -560,8 +552,6 @@ export function ProductEditForm({
                                 );
                               }
                             }}
-                            onUpload={() => setIsUploading(true)}
-                            onComplete={() => setIsUploading(false)}
                             signatureEndpoint="/api/admin/upload"
                           >
                             {({ open }) => (
@@ -578,7 +568,6 @@ export function ProductEditForm({
                           </CldUploadWidget>
                         )}
                       </div>
-
                       <input type="hidden" {...field} />
                     </div>
                   </FormControl>
@@ -694,7 +683,6 @@ export function ProductEditForm({
                           Add
                         </Button>
                       </div>
-
                       <div className="flex flex-wrap gap-2 mt-2">
                         {field.value?.map((size, index) => (
                           <Badge
@@ -715,6 +703,7 @@ export function ProductEditForm({
                   <FormDescription>
                     Enter available sizes one at a time
                   </FormDescription>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -739,6 +728,53 @@ export function ProductEditForm({
                 </FormItem>
               )}
             />
+
+            {/* Add the new warranty and return policy fields next to other specifications */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Existing fields like material, dimensions, etc. */}
+              {/* ... */}
+
+              {/* Add warranty field */}
+              <FormField
+                control={form.control}
+                name="warranty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Warranty</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="2 years standard warranty"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Specify warranty details (e.g., "2 years standard
+                      warranty")
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Add return policy field */}
+              <FormField
+                control={form.control}
+                name="returnPolicy"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Return Policy</FormLabel>
+                    <FormControl>
+                      <Input placeholder="30-day return policy" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Specify return policy details (e.g., "30-day return
+                      policy")
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           </div>
         </div>
 

@@ -1,22 +1,31 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { useCart } from "@/contexts/cart-context";
+import { useWishlist } from "@/contexts/wishlist-context";
 
-// This component doesn't render anything, it just handles syncing
-// cart and wishlist data when authentication state changes
+/**
+ * This component handles auth state changes and ensures data consistency
+ * across the application when auth state changes.
+ */
 export function AuthStateHandler() {
   const { user, isLoading } = useAuth();
-  const { syncServerCart } = useCart();
+  const { clearWishlist } = useWishlist();
+  const prevUserRef = useRef(user);
 
-  // Handle syncing cart data when user logs in
+  // Listen for auth state changes and sync dependent contexts
   useEffect(() => {
-    if (!isLoading && user) {
-      // User is logged in, sync the cart with the server
-      syncServerCart();
+    // Only run this effect when auth is not loading and user state actually changed
+    if (!isLoading && prevUserRef.current !== user) {
+      // If no user is logged in, clear wishlist (which requires auth)
+      if (!user) {
+        clearWishlist();
+      }
+      // Update the ref to current user
+      prevUserRef.current = user;
     }
-  }, [user, isLoading, syncServerCart]);
+  }, [user, isLoading, clearWishlist]);
 
-  return null; // This component doesn't render anything
+  // This component doesn't render anything visible
+  return null;
 }

@@ -170,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [toast]);
 
   // Handle Google login
-  const googleLogin = async (credential: string): Promise<boolean> => {
+  const googleLogin = async (token: string): Promise<boolean> => {
     try {
       setIsLoading(true);
       setError(null);
@@ -180,32 +180,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ token: credential }),
+        body: JSON.stringify({ token }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Google authentication failed");
+        const errorData = await response.json();
+        setError(errorData.message || "Google login failed");
+        setIsLoading(false);
+        return false;
       }
 
       const data = await response.json();
 
-      // Save token and user info
+      // Store the token in localStorage
       localStorage.setItem("authToken", data.token);
+
+      // Update user state immediately without setTimeout
       setUser(data.user);
       saveUserToLocalStorage(data.user);
+      setIsLoading(false);
 
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Google login error:", error);
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to authenticate with Google"
-      );
-      return false;
-    } finally {
+      setError(error.message || "An error occurred during login");
       setIsLoading(false);
+      return false;
     }
   };
 
