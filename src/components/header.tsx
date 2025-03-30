@@ -3,8 +3,8 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Menu, ShoppingCart, User, Search, Sun, Moon, Home, Heart } from "lucide-react"
-
+import { Menu, ShoppingCart, User, Search, Sun, Moon, Home, Heart, Package, Grid } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { 
   Sheet, 
@@ -24,6 +24,7 @@ export default function Header() {
   const router = useRouter()
   const { totalItems } = useCart()
   const { totalItems: wishlistItems } = useWishlist()
+  const { user } = useAuth() // Get user from auth context
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,9 +38,9 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background">
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center space-x-2">
-          <Link href="/" className="flex items-center space-x-2">
-            <span className="text-xl font-bold">MyBags</span>
+        <div className="flex items-center">
+          <Link href="/" className="flex items-center">
+            <span className="text-xl font-bold">CandidWear</span>
           </Link>
         </div>
 
@@ -57,20 +58,31 @@ export default function Header() {
           </div>
         </form>
 
-        {/* Desktop navigation */}
-        <nav className="hidden md:flex items-center space-x-4 lg:space-x-6">
-          <Link href="/products" className="text-sm font-medium hover:text-primary">
-            All Products
+        {/* Desktop navigation - Complete horizontal menu */}
+        <nav className="hidden md:flex items-center space-x-6">
+          <Link href="/" className="text-sm font-medium hover:text-primary flex items-center gap-1">
+            <Home className="h-4 w-4" />
+            <span>Home</span>
           </Link>
-          <Link href="/products?category=backpacks" className="text-sm font-medium hover:text-primary">
-            Backpacks
+          <Link href="/products" className="text-sm font-medium hover:text-primary flex items-center gap-1">
+            <Package className="h-4 w-4" />
+            <span>Products</span>
           </Link>
-          <Link href="/products?category=handbags" className="text-sm font-medium hover:text-primary">
-            Handbags
+          <Link href="/categories" className="text-sm font-medium hover:text-primary flex items-center gap-1">
+            <Grid className="h-4 w-4" />
+            <span>Categories</span>
           </Link>
-          <Link href="/products?category=wallets" className="text-sm font-medium hover:text-primary">
-            Wallets
+          <Link href="/account" className="text-sm font-medium hover:text-primary flex items-center gap-1">
+            <User className="h-4 w-4" />
+            <span>Account</span>
           </Link>
+          
+          {/* Admin link in desktop nav - Only for admins */}
+          {user?.role === 'admin' && (
+            <Link href="/admin" className="text-sm font-medium text-primary hover:text-primary/80">
+              Admin Dashboard
+            </Link>
+          )}
         </nav>
 
         {/* Right side buttons */}
@@ -90,7 +102,7 @@ export default function Header() {
             <span className="sr-only">Toggle Theme</span>
           </Button>
 
-          {/* Wishlist with Item Count */}
+          {/* Wishlist with Item Count - Fixed nesting issue */}
           <Link href="/wishlist">
             <Button variant="ghost" size="icon" aria-label="Wishlist" className="relative">
               <Heart className="h-5 w-5" />
@@ -116,10 +128,10 @@ export default function Header() {
             </Button>
           </Link>
 
-          {/* Account */}
+          {/* Mobile Menu Button - Only visible on mobile */}
           <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Menu">
+              <Button variant="ghost" size="icon" aria-label="Menu" className="md:hidden">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Menu</span>
               </Button>
@@ -138,14 +150,14 @@ export default function Header() {
                   onClick={() => setIsMenuOpen(false)}
                   className="flex items-center gap-2 text-lg font-medium"
                 >
-                  Products
+                  <Package className="h-5 w-5" /> Products
                 </Link>
                 <Link 
                   href="/categories" 
                   onClick={() => setIsMenuOpen(false)}
                   className="flex items-center gap-2 text-lg font-medium"
                 >
-                  Categories
+                  <Grid className="h-5 w-5" /> Categories
                 </Link>
                 <Link 
                   href="/cart" 
@@ -155,19 +167,30 @@ export default function Header() {
                   <ShoppingCart className="h-5 w-5" /> Cart
                 </Link>
                 <Link 
+                  href="/wishlist" 
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-2 text-lg font-medium"
+                >
+                  <Heart className="h-5 w-5" /> Wishlist
+                </Link>
+                <Link 
                   href="/account" 
                   onClick={() => setIsMenuOpen(false)}
                   className="flex items-center gap-2 text-lg font-medium"
                 >
                   <User className="h-5 w-5" /> Account
                 </Link>
-                <Link 
-                  href="/admin" 
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-2 text-lg font-medium border-t pt-4 mt-2"
-                >
-                  Admin Dashboard
-                </Link>
+                
+                {/* Admin Link - Only show if user has admin role */}
+                {user?.role === 'admin' && (
+                  <Link 
+                    href="/admin" 
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-2 text-lg font-medium border-t pt-4 mt-2"
+                  >
+                    Admin Dashboard
+                  </Link>
+                )}
               </nav>
             </SheetContent>
           </Sheet>
