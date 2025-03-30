@@ -10,9 +10,7 @@ export async function POST(request: NextRequest) {
   try {
     // Authentication check
     const authResult = await authenticate(request);
-
     const user = authResult.user;
-    console.log(authResult);
 
     if (!user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -21,9 +19,6 @@ export async function POST(request: NextRequest) {
     // Parse the request body
     const data = await request.json();
     const { productId, purpose, orderId } = data;
-
-    // Debug incoming request
-    console.log("Upload request:", { productId, purpose, orderId });
 
     // Allow non-admin access for payment proof and delivery proof uploads
     const isPaymentProof = purpose === "payment_proof";
@@ -53,7 +48,6 @@ export async function POST(request: NextRequest) {
 
     // Set folder for upload based on context
     let folder;
-
     if (isPaymentProof && orderId) {
       folder = `payment_proofs/${authResult.user.id}/${orderId}`;
     } else if (isPaymentProof) {

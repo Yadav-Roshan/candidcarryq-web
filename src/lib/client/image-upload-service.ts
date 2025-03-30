@@ -8,7 +8,8 @@
 export async function getUploadSignature(
   productId?: string,
   purpose?: string,
-  orderId?: string
+  orderId?: string,
+  endpoint: string = "/api/admin/upload" // Add endpoint parameter with default
 ): Promise<any> {
   try {
     // Get the authentication token from localStorage
@@ -24,7 +25,8 @@ export async function getUploadSignature(
 
     while (attempts < maxAttempts) {
       attempts++;
-      response = await fetch("/api/admin/upload", {
+      response = await fetch(endpoint, {
+        // Use the endpoint parameter
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -140,9 +142,20 @@ export interface UploadWidgetConfig {
 export async function getUploadWidgetOptions(
   productId?: string,
   purpose?: string,
-  orderId?: string
+  orderId?: string,
+  customEndpoint?: string
 ) {
-  const uploadConfig = await getUploadSignature(productId, purpose, orderId);
+  // Determine which endpoint to use based on the purpose
+  const endpoint =
+    customEndpoint ||
+    (purpose === "payment_proof" ? "/api/payment/upload" : "/api/admin/upload");
+
+  const uploadConfig = await getUploadSignature(
+    productId,
+    purpose,
+    orderId,
+    endpoint
+  );
 
   // Build options object based on the response
   const options: any = {
