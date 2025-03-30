@@ -39,9 +39,25 @@ export default function NewProductPage() {
         body: JSON.stringify(data),
       });
 
+      // Enhanced error handling to see what's happening
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to create product");
+        const errorText = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          // If not valid JSON, use the text directly
+          console.error("Invalid JSON response:", errorText);
+          throw new Error(
+            `Server error: ${response.status} - ${errorText.substring(0, 100)}`
+          );
+        }
+
+        console.error("API error response:", errorData);
+        throw new Error(
+          errorData.message ||
+            `Failed to create product (Status: ${response.status})`
+        );
       }
 
       const result = await response.json();
@@ -57,7 +73,10 @@ export default function NewProductPage() {
       console.error("Error creating product:", error);
       toast({
         title: "Error",
-        description: "Failed to create the product",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to create the product",
         variant: "destructive",
       });
     } finally {

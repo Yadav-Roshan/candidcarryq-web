@@ -13,6 +13,9 @@ const updateOrderSchema = z.object({
     .enum(["pending", "verified", "rejected", "completed", "failed"])
     .optional(),
   trackingNumber: z.string().optional(),
+  delivererName: z.string().optional(),
+  delivererPhone: z.string().optional(),
+  deliveryOtp: z.string().optional(),
   statusHistoryEntry: z
     .object({
       status: z.string(),
@@ -35,6 +38,11 @@ function generateTrackingNumber(): string {
   const randomPart = Math.floor(10000 + Math.random() * 90000);
 
   return `TRK-${dateStr}-${randomPart}`;
+}
+
+// Generate a random 6-digit OTP
+function generateOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 export async function GET(

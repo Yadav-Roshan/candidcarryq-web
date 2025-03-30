@@ -30,6 +30,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { CldUploadWidget } from "next-cloudinary";
 import { Badge } from "@/components/ui/badge";
+import { useDebugValue } from "react";
 
 // Validation schema
 const productSchema = z.object({
@@ -39,7 +40,7 @@ const productSchema = z.object({
   category: z.string().min(1, { message: "Please select a category" }),
   description: z.string().min(10, "Description must be at least 10 characters"),
   fullDescription: z.string().optional(),
-  isFeatured: z.boolean().default(false),
+  featured: z.boolean().default(false), // Changed from isFeatured to featured
   material: z.string().optional(),
   dimensions: z.string().optional(),
   weight: z.string().optional(),
@@ -97,7 +98,7 @@ export function ProductEditForm({
       category: product?.category || "",
       description: product?.description || "",
       fullDescription: product?.fullDescription || "",
-      isFeatured: product?.isFeatured || false,
+      featured: product?.featured || false, // Changed from isFeatured to featured
       material: product?.material || "",
       dimensions: product?.dimensions || "",
       weight: product?.weight || "",
@@ -135,7 +136,7 @@ export function ProductEditForm({
   const initializeUploadOptions = useCallback(async () => {
     try {
       const { signature, timestamp, cloudName, apiKey, folder, uploadPreset } =
-        await getUploadSignature(product?.id);
+        await getUploadSignature(product?.id, "product_upload");
 
       setUploadOptions({
         cloudName,
@@ -317,6 +318,114 @@ export function ProductEditForm({
       });
     }
   };
+
+  // Add this effect to update warranty and returnPolicy fields when product loads
+  useEffect(() => {
+    if (product) {
+      // Set warranty and returnPolicy values after product data loads
+      form.setValue("warranty", product.warranty || "");
+      form.setValue("returnPolicy", product.returnPolicy || "");
+
+      // You can also set other fields that might need updating
+      form.setValue("fullDescription", product.fullDescription || "");
+    }
+  }, [product, form]);
+
+  // Enhanced effect to make sure form values are reset correctly
+  useEffect(() => {
+    if (product) {
+      // Reset the form with all values from product
+      form.reset(
+        {
+          name: product.name || "",
+          price: product.price || 0,
+          salePrice: product.salePrice || null,
+          category: product.category || "",
+          description: product.description || "",
+          fullDescription: product.fullDescription || "",
+          featured: product.featured || false,
+          material: product.material || "",
+          dimensions: product.dimensions || "",
+          weight: product.weight || "",
+          capacity: product.capacity || "",
+          stock: product.stock || 0,
+          colors: product.colors || [],
+          sizes: product.sizes || [],
+          warranty: product.warranty || "",
+          returnPolicy: product.returnPolicy || "",
+          // Don't set the image here, it's handled in another effect
+          image: form.getValues("image"),
+        },
+        {
+          keepDefaultValues: false,
+        }
+      );
+
+      // Double-check that values were set properly
+      setTimeout(() => {
+        const currentWarranty = form.getValues("warranty");
+        const currentReturnPolicy = form.getValues("returnPolicy");
+      }, 0);
+    }
+  }, [product, form]);
+
+  // Add more aggressive form value setting
+  useEffect(() => {
+    if (product) {
+      // Force register these fields if they don't exist
+      if (!form.getValues("warranty")) {
+        form.register("warranty");
+      }
+      if (!form.getValues("returnPolicy")) {
+        form.register("returnPolicy");
+      }
+
+      // Explicitly set values with setTimeout to ensure form is ready
+      setTimeout(() => {
+        // Use raw setValue with direct values from product object
+        form.setValue("warranty", product.warranty || "", {
+          shouldValidate: true,
+          shouldDirty: true,
+          shouldTouch: true,
+        });
+
+        form.setValue("returnPolicy", product.returnPolicy || "", {
+          shouldValidate: true,
+          shouldDirty: true,
+          shouldTouch: true,
+        });
+      }, 100);
+    }
+  }, [product, form]);
+
+  // Add direct console logging inside the field render functions
+
+  // Add this immediately before the return statement of the component
+  // This guarantees we have string values for the form fields regardless of what's in product
+  useEffect(() => {
+    if (product && form) {
+      // Force empty strings for these fields if they're undefined
+      // This is different from the other hooks because we're bypassing React Hook Form's default behaviors
+      const warranty =
+        typeof product.warranty === "string" ? product.warranty : "";
+      const returnPolicy =
+        typeof product.returnPolicy === "string" ? product.returnPolicy : "";
+
+      setTimeout(() => {
+        // Update the DOM directly through the form API
+        document
+          .querySelector('input[name="warranty"]')
+          ?.setAttribute("value", warranty);
+        document
+          .querySelector('input[name="returnPolicy"]')
+          ?.setAttribute("value", returnPolicy);
+
+        // Also force the form state to update
+        form.setValue("warranty", warranty);
+        form.setValue("returnPolicy", returnPolicy);
+      }, 200);
+    }
+  }, [product, form]);
 
   return (
     <Form {...form}>
@@ -710,7 +819,7 @@ export function ProductEditForm({
 
             <FormField
               control={form.control}
-              name="isFeatured"
+              name="featured" // Changed from isFeatured to featured
               render={({ field }) => (
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                   <FormControl>
@@ -738,41 +847,64 @@ export function ProductEditForm({
               <FormField
                 control={form.control}
                 name="warranty"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Warranty</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="2 years standard warranty"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Specify warranty details (e.g., "2 years standard
-                      warranty")
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  // Add logging inside the render function
+
+                  return (
+                    <FormItem>
+                      <FormLabel>Warranty</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="2 years standard warranty"
+                          {...field}
+                          // Force the value directly in case React Hook Form isn't working correctly
+                          value={field.value || product?.warranty || ""}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            // Debug the change
+                            console.log("Warranty changed to:", e.target.value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Specify warranty details (e.g., "2 years standard
+                        warranty")
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               {/* Add return policy field */}
               <FormField
                 control={form.control}
                 name="returnPolicy"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Return Policy</FormLabel>
-                    <FormControl>
-                      <Input placeholder="30-day return policy" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Specify return policy details (e.g., "30-day return
-                      policy")
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  // Add logging inside the render function
+                  return (
+                    <FormItem>
+                      <FormLabel>Return Policy</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="30-day return policy"
+                          {...field}
+                          // Force the value directly in case React Hook Form isn't working correctly
+                          value={field.value || product?.returnPolicy || ""}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            // Debug the change
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Specify return policy details (e.g., "30-day return
+                        policy")
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
             </div>
           </div>

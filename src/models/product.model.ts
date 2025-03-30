@@ -93,9 +93,11 @@ const productSchema = new Schema<IProduct>(
     },
     warranty: {
       type: String,
+      default: "",
     },
     returnPolicy: {
       type: String,
+      default: "",
     },
     featured: {
       type: Boolean,
@@ -123,6 +125,15 @@ const productSchema = new Schema<IProduct>(
   },
   { timestamps: true }
 );
+
+// Add a pre-find middleware to ensure these fields exist on all documents
+productSchema.pre("findOne", function () {
+  this.projection = {
+    ...this.projection,
+    warranty: { $ifNull: ["$warranty", ""] },
+    returnPolicy: { $ifNull: ["$returnPolicy", ""] },
+  };
+});
 
 // Create or get the model
 const Product: Model<IProduct> =

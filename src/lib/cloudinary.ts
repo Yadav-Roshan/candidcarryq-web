@@ -44,6 +44,7 @@ export function generateProductImagePublicId(
   productId: string,
   index: number
 ): string {
+  // Direct folder structure - no temp folder
   return `products/${productId}/${index}`;
 }
 
@@ -106,4 +107,12 @@ export function generateUploadSignature(params: Record<string, any> = {}): {
   );
 
   return { signature, timestamp };
+}
+
+/**
+ * Get the upload preset name for unsigned uploads
+ * This is used when the Cloudinary account is configured for unsigned uploads
+ */
+export function getUploadPreset(): string | null {
+  return process.env.CLOUDINARY_UPLOAD_PRESET || null;
 }

@@ -83,6 +83,9 @@ interface Order {
   createdAt: string;
   updatedAt: string;
   statusHistory: StatusHistoryEntry[];
+  deliveryOtp?: string;
+  delivererName?: string;
+  delivererPhone?: string;
 }
 
 export default function OrderDetailPage() {
@@ -354,6 +357,28 @@ export default function OrderDetailPage() {
             </AlertDescription>
           </Alert>
         )}
+
+      {/* Add a delivery OTP alert when the order is shipped */}
+      {order.orderStatus === "shipped" && order.deliveryOtp && (
+        <Alert className="bg-blue-50 text-blue-800 border-blue-300 mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Delivery Verification</AlertTitle>
+          <AlertDescription className="space-y-2">
+            <p>
+              When your order arrives, please provide the delivery person with
+              this verification code:
+            </p>
+            <div className="bg-white p-3 rounded-md border border-blue-200 mt-2">
+              <p className="font-mono font-bold text-xl text-center tracking-wider">
+                {order.deliveryOtp}
+              </p>
+            </div>
+            <p className="text-sm">
+              This code ensures your package is delivered to the right person.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Order Status Tracker - Only show for non-cancelled orders */}
       {currentStep >= 0 && (
@@ -995,6 +1020,27 @@ export default function OrderDetailPage() {
                   )}
                 </div>
               </div>
+
+              {/* Deliverer Information - Show only when shipped */}
+              {order.orderStatus === "shipped" &&
+                order.delivererName &&
+                order.delivererPhone && (
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">
+                      Deliverer Information
+                    </h3>
+                    <div className="text-sm bg-muted/30 p-3 rounded-md space-y-1">
+                      <p>
+                        <span className="text-muted-foreground">Name:</span>{" "}
+                        {order.delivererName}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Phone:</span>{" "}
+                        {order.delivererPhone}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
               {/* Need Help */}
               <div className="bg-muted/50 p-4 rounded-md">

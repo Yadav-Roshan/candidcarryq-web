@@ -26,14 +26,14 @@ export async function GET(request: NextRequest) {
           rating: product.rating,
           reviewCount: product.reviewCount,
           stock: product.stock,
-          isFeatured: true,
+          featured: true, // Changed from isFeatured to featured
         }))
       );
     } catch (dbError) {
       console.error("Database connection error:", dbError);
 
       // Fall back to mock data
-      const featured = mockProducts.filter((p) => p.isFeatured).slice(0, 4);
+      const featured = mockProducts.filter((p) => p.featured).slice(0, 4);
       return NextResponse.json(featured);
     }
   } catch (error) {

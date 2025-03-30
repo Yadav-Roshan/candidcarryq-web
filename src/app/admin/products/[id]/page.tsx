@@ -40,6 +40,27 @@ export default function ProductDetailPage() {
       try {
         setIsLoading(true);
         const productData = await fetchProductById(id.toString());
+        console.log("PRODUCT DATA: ", productData);
+
+        // Add diagnostic logging
+        console.log("ProductPage - Raw product data:", productData);
+        console.log("ProductPage - Warranty and Return Policy:", {
+          warranty: productData?.warranty,
+          returnPolicy: productData?.returnPolicy,
+          hasWarranty: productData && "warranty" in productData,
+          hasReturnPolicy: productData && "returnPolicy" in productData,
+        });
+
+        // Make sure warranty and returnPolicy are explicitly set
+        if (productData) {
+          if (typeof productData.warranty === "undefined") {
+            productData.warranty = "";
+          }
+          if (typeof productData.returnPolicy === "undefined") {
+            productData.returnPolicy = "";
+          }
+        }
+
         setProduct(productData);
       } catch (error) {
         console.error("Error loading product:", error);

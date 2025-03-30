@@ -10,7 +10,7 @@ export interface ProductDetail {
   rating?: number;
   reviewCount?: number;
   stock?: number;
-  isFeatured?: boolean;
+  featured?: boolean; // Changed from isFeatured to featured
   images?: string[];
   imagePublicIds?: string[];
   colors?: string[];
@@ -19,6 +19,8 @@ export interface ProductDetail {
   weight?: string;
   capacity?: string;
   fullDescription?: string;
+  warranty?: string;
+  returnPolicy?: string;
 }
 
 // Client-side function to get product by ID
@@ -26,10 +28,30 @@ export async function fetchProductById(
   id: string
 ): Promise<ProductDetail | null> {
   try {
-    const response = await fetch(`/api/products/${id}`);
+    // Get the authentication token from localStorage
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      console.error("Authentication token not found. Please log in again.");
+      return null;
+    }
+
+    // Use the admin API endpoint instead of the public one
+    const response = await fetch(`/api/admin/products/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     if (!response.ok) {
-      console.error(`Product ${id} not found`);
+      // Check for specific error cases
+      if (response.status === 401) {
+        console.error("Authentication failed. Please log in again.");
+        // Could trigger a logout or redirect here
+      } else if (response.status === 403) {
+        console.error("You don't have permission to access this product.");
+      } else {
+        console.error(`Product ${id} not found or error: ${response.status}`);
+      }
       return null;
     }
 
@@ -65,7 +87,7 @@ export async function updateProduct(
       category: productData.category,
       description: productData.description,
       fullDescription: productData.fullDescription,
-      isFeatured: productData.isFeatured,
+      featured: productData.featured, // Changed from isFeatured to featured
       material: productData.material,
       dimensions: productData.dimensions,
       weight: productData.weight,
@@ -76,9 +98,15 @@ export async function updateProduct(
       imagePublicIds: productData.imagePublicIds,
       colors: productData.colors,
       sizes: productData.sizes,
+      warranty: productData.warranty,
+      returnPolicy: productData.returnPolicy,
     };
 
-    const response = await fetch(`/api/products/${id}`, {
+    // Debug output to check API call
+    console.log(`Sending PUT request to /api/admin/products/${id}`);
+
+    // FIX: Use the admin-specific endpoint for product updates
+    const response = await fetch(`/api/admin/products/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -87,14 +115,18 @@ export async function updateProduct(
       body: JSON.stringify(cleanedData),
     });
 
+    // Detailed error logging
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(`API error (${response.status}):`, errorText);
+
       let errorData;
       try {
         errorData = JSON.parse(errorText);
       } catch (e) {
         errorData = { message: errorText };
       }
+
       throw new Error(
         errorData.message || `Failed to update product: ${response.status}`
       );

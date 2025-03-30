@@ -29,7 +29,8 @@ const productSchema = z.object({
   weight: z.string().optional(),
   capacity: z.string().optional(),
   fullDescription: z.string().optional(),
-  featured: z.boolean().optional(),
+  featured: z.boolean().optional(), // Field name in the database
+  isFeatured: z.boolean().optional(), // Field name from the client
   stock: z.number().int().nonnegative("Stock must be a non-negative integer"),
   publishedDate: z.date().optional(),
   warranty: z.string().optional(),
@@ -105,22 +106,25 @@ export async function POST(request: NextRequest) {
     await connectToDatabase();
 
     // Authentication middleware
-    const user = await authenticate(request);
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    // Admin check
-    if (!isAdmin(user)) {
-      return NextResponse.json({ message: "Access denied" }, { status: 403 });
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200 || !isAdmin(authResult.user)) {
+      return NextResponse.json(
+        { message: authResult.message || "Access denied" },
+        { status: authResult.status || 403 }
+      );
     }
 
     // Parse and validate request body
     const body = await request.json();
-    const validationResult = productSchema.safeParse({
+
+    // Remove the mapping and just assign publishedDate
+    const processedBody = {
       ...body,
       publishedDate: new Date(),
-    });
+      // No mapping needed between featured and isFeatured
+    };
+
+    const validationResult = productSchema.safeParse(processedBody);
 
     if (!validationResult.success) {
       return NextResponse.json(

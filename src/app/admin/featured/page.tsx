@@ -33,7 +33,7 @@ export default function FeaturedProductsPage() {
         setAllProducts(products);
 
         // Set initially featured products
-        setFeaturedProducts(products.filter((product) => product.isFeatured));
+        setFeaturedProducts(products.filter((product) => product.featured)); // Changed from isFeatured to featured
       } catch (error) {
         console.error("Error loading products:", error);
         toast({

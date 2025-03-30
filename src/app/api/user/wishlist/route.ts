@@ -53,7 +53,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Authentication middleware
-    const user = await authenticate(request);
+    const authResult = await authenticate(request);
+
+    const user = authResult.user;
 
     if (!user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -105,7 +107,9 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // Authentication middleware
-    const user = await authenticate(request);
+    const authResult = await authenticate(request);
+
+    const user = authResult.user;
 
     if (!user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
