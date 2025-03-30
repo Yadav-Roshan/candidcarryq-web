@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, ShoppingBag, Users, DollarSign, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { formatNPR } from "@/lib/utils";
+import { PromocodeStatsWidget } from "@/components/admin/promocode-stats-widget";
 
 interface DashboardStats {
   totalProducts: number;
@@ -142,6 +143,27 @@ export default function AdminDashboard() {
               </div>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Second row for additional stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Promocode Stats Widget */}
+        <PromocodeStatsWidget />
+
+        {/* You can add other widgets here */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Recent Orders
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Recent orders content */}
+            <p className="text-sm text-muted-foreground">
+              Display most recent orders here...
+            </p>
           </CardContent>
         </Card>
       </div>

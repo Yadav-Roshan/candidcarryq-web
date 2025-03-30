@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Order from "@/models/order.model";
 import { authenticate, isAdmin } from "@/middleware/auth.middleware";
 import { z } from "zod";
+import mongoose from "mongoose";
 
 // Schema for updating order status
 const updateOrderSchema = z.object({
@@ -50,46 +51,83 @@ export async function GET(
   { params }: { params: { id: string } | Promise<{ id: string }> }
 ) {
   try {
+    // Authentication middleware
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status }
+      );
+    }
+
+    const userId = authResult.user.id;
+
     // Resolve params if it's a Promise
     const resolvedParams = params instanceof Promise ? await params : params;
+    const orderId = resolvedParams.id;
 
-    // Ensure we have the id parameter
-    if (!resolvedParams?.id) {
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
       return NextResponse.json(
-        { message: "Order ID is required" },
+        { message: "Invalid order ID format" },
         { status: 400 }
       );
     }
 
-    const id = resolvedParams.id; // Now safely access the id
-
     await connectToDatabase();
 
-    // Authentication middleware
-    const authResult = await authenticate(request);
-    if (authResult.status !== 200) {
-      return authResult;
-    }
-
-    const user = authResult.user;
-    const order = await Order.findById(id);
+    // Find the order that belongs to the user
+    const order = await Order.findOne({
+      _id: orderId,
+      user: userId,
+    }).lean();
 
     if (!order) {
-      return NextResponse.json({ message: "Order not found" }, { status: 404 });
-    }
-
-    // Check if user is authorized to view this order
-    if (user.role !== "admin" && order.user.toString() !== user.id.toString()) {
       return NextResponse.json(
-        { message: "Not authorized to view this order" },
-        { status: 403 }
+        { message: "Order not found or access denied" },
+        { status: 404 }
       );
     }
 
-    return NextResponse.json(order);
+    // Format the order for the client
+    const formattedOrder = {
+      id: order._id.toString(),
+      orderNumber: order.orderNumber,
+      date: order.createdAt,
+      status: order.orderStatus,
+      paymentStatus: order.paymentStatus,
+      items: order.items.map((item: any) => ({
+        id: item.product.toString(),
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image || null,
+        color: item.color || null,
+        size: item.size || null,
+      })),
+      shippingAddress: order.shippingAddress,
+      paymentMethod: order.paymentMethod,
+      transactionRef: order.transactionRef,
+      paymentProofImage: order.paymentProofImage,
+      total: order.totalAmount,
+      shippingCost: order.shippingCost || 0,
+      taxAmount: order.taxAmount || 0,
+      discount: order.discount || 0, // Include discount
+      promoCode: order.promoCode || null, // Include promocode
+      statusHistory: order.statusHistory || [],
+      trackingNumber: order.trackingNumber || null,
+      deliveryOtp: order.deliveryOtp || null,
+      delivererName: order.delivererName || null,
+      delivererPhone: order.delivererPhone || null,
+    };
+
+    return NextResponse.json({ order: formattedOrder });
   } catch (error) {
-    console.error("Order API error:", error);
-    return NextResponse.json({ message: "Server error" }, { status: 500 });
+    console.error("Error fetching order:", error);
+    return NextResponse.json(
+      { message: "Error fetching order details" },
+      { status: 500 }
+    );
   }
 }
 

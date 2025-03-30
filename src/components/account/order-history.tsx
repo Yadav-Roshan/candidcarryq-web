@@ -59,12 +59,14 @@ interface Order {
     image?: string;
   }[];
   shippingAddress?: {
-    street: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
+    phoneNumber: string;
+    buildingName?: string;
+    locality: string;
     wardNo?: string;
+    postalCode: string;
+    district: string;
+    province: string;
+    country: string;
     landmark?: string;
   };
   paymentMethod?: string;
@@ -73,6 +75,7 @@ interface Order {
   taxAmount?: number;
   discount?: number;
   promoCode?: string;
+  promoCodeDiscount?: number; // Add promoCodeDiscount field
   statusHistory?: Array<{
     status: string;
     timestamp: string;
@@ -687,6 +690,55 @@ export function OrderHistory() {
                         </div>
                       )}
 
+                      {/* Add Delivery Information Section when order is shipped */}
+                      {currentOrderStatus === "shipped" &&
+                        (order.delivererName || order.delivererPhone) && (
+                          <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
+                            <h3 className="font-medium flex items-center gap-2 mb-3">
+                              <Truck className="h-4 w-4 text-amber-500" />
+                              Delivery Information
+                            </h3>
+                            <div className="space-y-2">
+                              {order.delivererName && (
+                                <div>
+                                  <span className="text-muted-foreground text-sm">
+                                    Delivery Person:
+                                  </span>
+                                  <p className="font-medium">
+                                    {order.delivererName}
+                                  </p>
+                                </div>
+                              )}
+                              {order.delivererPhone && (
+                                <div>
+                                  <span className="text-muted-foreground text-sm">
+                                    Contact:
+                                  </span>
+                                  <p className="font-medium">
+                                    {order.delivererPhone}
+                                  </p>
+                                </div>
+                              )}
+                              {order.deliveryOtp && (
+                                <div className="mt-3 pt-3 border-t border-amber-200">
+                                  <p className="text-muted-foreground text-sm mb-1">
+                                    Delivery Verification Code:
+                                  </p>
+                                  <div className="bg-white p-2 rounded border border-amber-300">
+                                    <p className="font-mono text-center font-bold text-lg tracking-wider">
+                                      {order.deliveryOtp}
+                                    </p>
+                                  </div>
+                                  <p className="text-xs mt-2 text-muted-foreground">
+                                    Please provide this code to the delivery
+                                    person when your order arrives
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
                       {/* Order details in tabs */}
                       <Tabs defaultValue="items">
                         <TabsList className="grid w-full grid-cols-3">
@@ -791,24 +843,38 @@ export function OrderHistory() {
                                   Shipping Address
                                 </h5>
                                 <div className="text-sm space-y-1">
+                                  {/* Phone number (required field) */}
+                                  <p>
+                                    <span className="text-muted-foreground">
+                                      Phone:{" "}
+                                    </span>
+                                    {order.shippingAddress.phoneNumber}
+                                  </p>
+
+                                  {/* Building name (optional field) */}
                                   {order.shippingAddress.buildingName && (
                                     <p>{order.shippingAddress.buildingName}</p>
                                   )}
-                                  <p>{order.shippingAddress.street}</p>
+
+                                  {/* Locality (previously street) */}
+                                  <p>{order.shippingAddress.locality}</p>
+
+                                  {/* Ward number (optional field) */}
                                   {order.shippingAddress.wardNo && (
                                     <p>Ward {order.shippingAddress.wardNo}</p>
                                   )}
+
                                   <p>
-                                    {order.shippingAddress.city},{" "}
-                                    {order.shippingAddress.state}{" "}
+                                    {order.shippingAddress.district},{" "}
+                                    {/* Previously city */}
+                                    {order.shippingAddress.province}{" "}
+                                    {/* Previously state */}
                                     {order.shippingAddress.postalCode}
                                   </p>
+
                                   <p>{order.shippingAddress.country}</p>
-                                  {order.shippingAddress.phoneNumber && (
-                                    <p className="mt-1">
-                                      Phone: {order.shippingAddress.phoneNumber}
-                                    </p>
-                                  )}
+
+                                  {/* Landmark (optional field) */}
                                   {order.shippingAddress.landmark && (
                                     <p className="mt-1">
                                       Landmark: {order.shippingAddress.landmark}
@@ -817,144 +883,55 @@ export function OrderHistory() {
                                 </div>
                               </div>
 
-                              <div className="bg-muted/30 p-3 rounded-md">
-                                <h5 className="text-sm font-medium mb-2">
-                                  Delivery Status
-                                </h5>
-                                <div className="flex items-center gap-2 mb-3">
-                                  <StatusBadge status={currentOrderStatus} />
-                                  <span className="text-sm">
-                                    {currentOrderStatus === "pending" &&
-                                      "Order received, waiting to be processed"}
-                                    {currentOrderStatus === "processing" &&
-                                      "Order is being prepared for shipping"}
-                                    {currentOrderStatus === "shipped" &&
-                                      "Your order is on its way"}
-                                    {currentOrderStatus === "delivered" &&
-                                      "Your order has been delivered"}
-                                    {currentOrderStatus === "cancelled" &&
-                                      "This order was cancelled"}
-                                  </span>
-                                </div>
-
-                                {/* Estimated delivery info */}
-                                {currentOrderStatus === "shipped" && (
-                                  <div className="text-sm text-muted-foreground mt-2">
-                                    <p>Estimated delivery: 2-3 business days</p>
-                                  </div>
-                                )}
-                              </div>
-
-                              {order.trackingNumber && (
-                                <div className="bg-muted/30 p-3 rounded-md">
-                                  <h5 className="text-sm font-medium mb-2">
-                                    Tracking Information
-                                  </h5>
-                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                    <div>
-                                      <p className="text-xs text-muted-foreground">
-                                        Tracking Number
-                                      </p>
-                                      <code className="text-sm font-mono bg-muted/50 px-1 py-0.5 rounded">
-                                        {order.trackingNumber}
-                                      </code>
-                                    </div>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="text-xs h-8 flex items-center gap-1"
-                                    >
-                                      <Truck className="h-3 w-3" />
-                                      Track Package
-                                    </Button>
-                                  </div>
-                                </div>
-                              )}
-
-                              {(order.status === "shipped" ||
-                                currentOrderStatus === "shipped") && (
-                                <div className="bg-muted/30 p-3 rounded-md">
+                              {/* Add deliverer information to shipping tab */}
+                              {(order.delivererName ||
+                                order.delivererPhone) && (
+                                <div className="bg-amber-50 border border-amber-200 p-3 rounded-md mt-4">
                                   <h5 className="text-sm font-medium mb-2">
                                     Courier Details
                                   </h5>
-                                  {order.delivererName &&
-                                  order.delivererPhone ? (
-                                    <div className="text-sm space-y-2">
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-muted-foreground">
-                                          Status:
-                                        </span>
-                                        <Badge
-                                          variant="outline"
-                                          className="bg-amber-100 text-amber-800 border-amber-300"
-                                        >
-                                          In Transit
-                                        </Badge>
-                                      </div>
-                                      <p>
+                                  <div className="space-y-2 text-sm">
+                                    {order.delivererName && (
+                                      <div className="flex justify-between">
                                         <span className="text-muted-foreground">
                                           Delivery Person:
-                                        </span>{" "}
+                                        </span>
                                         <span className="font-medium">
                                           {order.delivererName}
                                         </span>
-                                      </p>
-                                      <p>
+                                      </div>
+                                    )}
+                                    {order.delivererPhone && (
+                                      <div className="flex justify-between">
                                         <span className="text-muted-foreground">
-                                          Contact:
-                                        </span>{" "}
+                                          Contact Number:
+                                        </span>
                                         <span className="font-medium">
                                           {order.delivererPhone}
                                         </span>
-                                      </p>
-                                    </div>
-                                  ) : (
-                                    <p className="text-sm text-muted-foreground">
-                                      Courier details will be available once
-                                      your package is dispatched.
-                                    </p>
-                                  )}
-
-                                  {order.deliveryOtp && (
-                                    <div className="mt-3 pt-3 border-t border-border">
-                                      <p className="text-sm font-medium mb-2">
-                                        Delivery Verification Code:
-                                      </p>
-                                      <div className="bg-white border border-border rounded p-2">
-                                        <p className="font-mono font-bold text-lg text-center tracking-wider">
-                                          {order.deliveryOtp}
-                                        </p>
                                       </div>
-                                      <p className="text-xs mt-2 text-muted-foreground">
-                                        Please provide this code to the delivery
-                                        person when your order arrives.
-                                      </p>
-                                    </div>
-                                  )}
+                                    )}
+                                  </div>
                                 </div>
                               )}
 
-                              <div className="bg-muted/30 p-3 rounded-md">
-                                <h5 className="text-sm font-medium mb-2">
-                                  Shipping Details
-                                </h5>
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                  <div>
-                                    <p className="text-muted-foreground">
-                                      Shipping Cost:
+                              {/* Display OTP */}
+                              {order.deliveryOtp && (
+                                <div className="bg-amber-50 border border-amber-200 p-3 rounded-md">
+                                  <h5 className="text-sm font-medium mb-2">
+                                    Delivery Verification
+                                  </h5>
+                                  <p className="text-xs text-muted-foreground mb-2">
+                                    Provide this code to the delivery person
+                                    when your order arrives
+                                  </p>
+                                  <div className="bg-white p-2 rounded border border-amber-300">
+                                    <p className="font-mono text-center font-bold text-lg tracking-wider">
+                                      {order.deliveryOtp}
                                     </p>
-                                    <p>
-                                      {formatPrice(order.shippingCost || 0)}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-muted-foreground">
-                                      Method:
-                                    </p>
-                                    <p>Standard Delivery</p>
                                   </div>
                                 </div>
-                              </div>
+                              )}
                             </div>
                           )}
                         </TabsContent>

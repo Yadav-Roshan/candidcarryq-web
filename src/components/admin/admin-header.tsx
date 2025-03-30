@@ -2,90 +2,68 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Home, Package, ShoppingBag, Megaphone, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  Package,
-  ShoppingBag,
-  LogOut,
-  Star,
-  Megaphone,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/auth-context";
 
-interface AdminNavItem {
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  href: string;
-}
-
-const adminNavItems: AdminNavItem[] = [
+const navLinks = [
+  { href: "/admin", label: "Dashboard", icon: <Home className="h-4 w-4" /> },
   {
-    title: "Dashboard",
-    icon: LayoutDashboard,
-    href: "/admin",
-  },
-  {
-    title: "Products",
-    icon: Package,
     href: "/admin/products",
+    label: "Products",
+    icon: <Package className="h-4 w-4" />,
   },
   {
-    title: "Featured",
-    icon: Star,
-    href: "/admin/featured",
-  },
-  {
-    title: "Orders",
-    icon: ShoppingBag,
     href: "/admin/orders",
+    label: "Orders",
+    icon: <ShoppingBag className="h-4 w-4" />,
   },
   {
-    title: "Announcements",
-    icon: Megaphone,
     href: "/admin/announcements",
+    label: "Announcements",
+    icon: <Megaphone className="h-4 w-4" />,
+  },
+  {
+    href: "/admin/promocodes",
+    label: "Promo Codes",
+    icon: <Tag className="h-4 w-4" />,
   },
 ];
 
 export function AdminHeader() {
   const pathname = usePathname();
-  const { logout } = useAuth();
+
+  const isActive = (path: string) => {
+    if (path === "/admin") {
+      return pathname === "/admin";
+    }
+    return pathname.startsWith(path);
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Link href="/admin" className="text-2xl font-bold">
-          CandidWear Admin
-        </Link>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={logout}
-          className="flex items-center gap-2"
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Logout</span>
-        </Button>
+    <header className="pb-4">
+      <div className="flex flex-col space-y-4">
+        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+        <nav className="flex overflow-auto pb-2 hide-scrollbar">
+          <ul className="flex items-center space-x-4">
+            {navLinks.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className={cn(
+                    "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    isActive(link.href)
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  )}
+                >
+                  {link.icon}
+                  <span className="ml-2">{link.label}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
-
-      <nav className="flex flex-wrap gap-2 border-b pb-4">
-        {adminNavItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-              pathname === item.href || pathname?.startsWith(`${item.href}/`)
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary/50 hover:bg-secondary"
-            )}
-          >
-            <item.icon className="h-4 w-4 mr-2" />
-            {item.title}
-          </Link>
-        ))}
-      </nav>
-    </div>
+    </header>
   );
 }

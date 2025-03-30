@@ -40,6 +40,8 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { OrderStatusBadge } from "@/components/order-status-badge";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 // Define interfaces for TypeScript
 interface OrderItem {
@@ -62,12 +64,14 @@ interface Order {
   items: OrderItem[];
   totalAmount: number;
   shippingAddress: {
-    street: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
+    phoneNumber: string;
+    buildingName?: string;
+    locality: string;
     wardNo?: string;
+    postalCode: string;
+    district: string;
+    province: string;
+    country: string;
     landmark?: string;
   };
   paymentMethod: string;
@@ -79,6 +83,7 @@ interface Order {
   taxAmount: number;
   discount?: number;
   promoCode?: string;
+  promoCodeDiscount?: number; // Add promoCodeDiscount field
   trackingNumber?: string;
   createdAt: string;
   updatedAt: string;
@@ -88,7 +93,7 @@ interface Order {
   delivererPhone?: string;
 }
 
-export default function OrderDetailPage() {
+export default function OrderDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -780,8 +785,9 @@ export default function OrderDetailPage() {
                       )}
                     </span>
                   </div>
-                  {order.discount && order.discount > 0 && (
-                    <div className="flex justify-between text-green-600">
+                  {/* Show discount info with promo code details if applicable */}
+                  {order.discount > 0 && (
+                    <div className="flex justify-between text-green-600 mb-2">
                       <span>
                         Discount {order.promoCode && `(${order.promoCode})`}
                       </span>
@@ -1004,12 +1010,17 @@ export default function OrderDetailPage() {
               <div>
                 <h3 className="text-sm font-medium mb-2">Shipping Address</h3>
                 <div className="text-sm">
-                  <p>{order.shippingAddress.street}</p>
+                  <p>{order.shippingAddress.phoneNumber}</p>
+                  {order.shippingAddress.buildingName && (
+                    <p>{order.shippingAddress.buildingName}</p>
+                  )}
+                  <p>{order.shippingAddress.locality}</p>
                   {order.shippingAddress.wardNo && (
                     <p>Ward {order.shippingAddress.wardNo}</p>
                   )}
                   <p>
-                    {order.shippingAddress.city}, {order.shippingAddress.state}{" "}
+                    {order.shippingAddress.district},{" "}
+                    {order.shippingAddress.province}{" "}
                     {order.shippingAddress.postalCode}
                   </p>
                   <p>{order.shippingAddress.country}</p>

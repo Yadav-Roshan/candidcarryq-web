@@ -29,7 +29,6 @@ export async function authenticate(req: NextRequest) {
   }
 
   const decoded = verifyToken(token);
-  console.log("Decoded token:", decoded);
 
   if (!decoded || typeof decoded !== "object") {
     return { status: 401, message: "Invalid token" };
@@ -44,12 +43,6 @@ export async function authenticate(req: NextRequest) {
     if (!user) {
       return { status: 404, message: "User not found" };
     }
-
-    console.log("Authenticated user:", {
-      id: user._id.toString(),
-      role: user.role,
-      email: user.email,
-    });
 
     // Return user object in consistent format
     return {
@@ -72,14 +65,11 @@ export async function authenticate(req: NextRequest) {
 
 // Update the isAdmin function to be more robust
 export function isAdmin(user: any) {
-  console.log("Checking admin privileges for user:", user);
-
   // Check if user has role property and it equals 'admin'
   if (!user) return false;
 
   // Handle different object formats
   const role = user.role || (user.user && user.user.role);
-  console.log("User role:", role);
 
   return role === "admin";
 }
