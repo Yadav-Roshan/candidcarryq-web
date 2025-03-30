@@ -1,25 +1,23 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingBag, 
-  Users, 
-  Settings, 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingBag,
   LogOut,
   Star,
-  Megaphone
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useAuth } from "@/contexts/auth-context"
+  Megaphone,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/auth-context";
 
 interface AdminNavItem {
-  title: string
-  icon: React.ComponentType<{ className?: string }>
-  href: string
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  href: string;
 }
 
 const adminNavItems: AdminNavItem[] = [
@@ -44,36 +42,33 @@ const adminNavItems: AdminNavItem[] = [
     href: "/admin/orders",
   },
   {
-    title: "Customers",
-    icon: Users,
-    href: "/admin/customers",
-  },
-  {
     title: "Announcements",
     icon: Megaphone,
     href: "/admin/announcements",
   },
-  {
-    title: "Settings",
-    icon: Settings,
-    href: "/admin/settings",
-  },
-]
+];
 
 export function AdminHeader() {
-  const pathname = usePathname()
-  const { logout } = useAuth()
-  
+  const pathname = usePathname();
+  const { logout } = useAuth();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Link href="/admin" className="text-2xl font-bold">CandidWear Admin</Link>
-        <Button variant="outline" size="sm" onClick={logout} className="flex items-center gap-2">
+        <Link href="/admin" className="text-2xl font-bold">
+          CandidWear Admin
+        </Link>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={logout}
+          className="flex items-center gap-2"
+        >
           <LogOut className="h-4 w-4" />
           <span>Logout</span>
         </Button>
       </div>
-      
+
       <nav className="flex flex-wrap gap-2 border-b pb-4">
         {adminNavItems.map((item) => (
           <Link
@@ -92,5 +87,5 @@ export function AdminHeader() {
         ))}
       </nav>
     </div>
-  )
+  );
 }

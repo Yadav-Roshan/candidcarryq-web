@@ -15,6 +15,25 @@ const AddressSchema = new Schema(
   { _id: false }
 );
 
+// Define cart item schema
+const CartItemSchema = new Schema(
+  {
+    productId: {
+      type: Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+    color: String,
+    size: String,
+  },
+  { _id: false }
+);
+
 export interface Address {
   buildingName?: string;
   locality: string;
@@ -34,8 +53,15 @@ export interface IUser extends Document {
   avatar?: string;
   address?: Address;
   googleId: string;
-  authProvider: "google";
+  authProvider: "local" | "google";
   emailVerified: boolean;
+  wishlist?: string[];
+  cart?: {
+    productId: string;
+    quantity: number;
+    color?: string;
+    size?: string;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,23 +108,36 @@ const UserSchema = new Schema<IUser>(
     address: AddressSchema, // Keep the address field
     googleId: {
       type: String,
-      required: true,
-      unique: true,
+      sparse: true, // This allows null values while maintaining uniqueness for non-null values
     },
     authProvider: {
       type: String,
-      enum: ["google"],
-      default: "google",
+      enum: ["local", "google"],
+      default: "local",
     },
     emailVerified: {
       type: Boolean,
-      default: true, // Google emails are already verified
+      default: false,
     },
+    // Add wishlist field to store wishlisted product IDs
+    wishlist: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Product",
+      },
+    ],
+    // Add cart field to store cart items
+    cart: [CartItemSchema],
   },
   {
     timestamps: true,
   }
 );
+
+// Only hash the password if it's new or modified
+UserSchema.pre("save", async function (next) {
+  // ...existing code...
+});
 
 // Use mongoose.models to check if the model is already defined
 // This prevents the model from being redefined on hot reloads

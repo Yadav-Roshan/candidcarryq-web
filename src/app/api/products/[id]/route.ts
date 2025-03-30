@@ -4,7 +4,6 @@ import Product from "@/models/product.model";
 import { authenticate, isAdmin } from "@/middleware/auth.middleware";
 import { z } from "zod";
 import mongoose from "mongoose";
-import { mockProducts } from "@/lib/api-mock-data";
 import { deleteImage, deleteMultipleImages } from "@/lib/cloudinary";
 
 // Update the product schema validation for updates
@@ -55,75 +54,58 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Ensure params.id is valid before using it
-    if (!params || !params.id) {
+    const { id } = params;
+
+    await connectToDatabase();
+
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
-        { message: "Product ID is required" },
+        { message: "Invalid product ID format" },
         { status: 400 }
       );
     }
 
-    const id = params.id;
+    // Find product in database
+    const product = await Product.findById(id);
 
-    // Try to connect to MongoDB
-    try {
-      await connectToDatabase();
-      const product = await Product.findById(id);
-
-      if (!product) {
-        // Check mock data
-        const mockProduct = mockProducts.find((p) => p.id === id);
-        if (mockProduct) {
-          return NextResponse.json({ product: mockProduct });
-        }
-        return NextResponse.json(
-          { message: "Product not found" },
-          { status: 404 }
-        );
-      }
-
-      return NextResponse.json({
-        product: {
-          id: product._id.toString(),
-          name: product.name,
-          price: product.price,
-          image: product.image,
-          description: product.description,
-          category: product.category,
-          salePrice: product.salePrice,
-          rating: product.rating,
-          reviewCount: product.reviewCount,
-          stock: product.stock,
-          isFeatured: product.featured,
-          images: product.images,
-          imagePublicIds: product.imagePublicIds,
-          material: product.material,
-          dimensions: product.dimensions,
-          weight: product.weight,
-          capacity: product.capacity,
-          fullDescription: product.fullDescription,
-          publishedDate: product.publishedDate,
-          colors: product.colors,
-          sizes: product.sizes,
-        },
-      });
-    } catch (dbError) {
-      console.error("Database connection error:", dbError);
-
-      // Check mock data
-      const mockProduct = mockProducts.find((p) => p.id === id);
-      if (mockProduct) {
-        return NextResponse.json({ product: mockProduct });
-      }
-
+    if (!product) {
+      // Don't fall back to mock data, just return a 404
       return NextResponse.json(
         { message: "Product not found" },
         { status: 404 }
       );
     }
+
+    // Return the found product
+    return NextResponse.json({
+      product: {
+        id: product._id.toString(),
+        name: product.name,
+        description: product.description,
+        fullDescription: product.fullDescription || undefined,
+        price: product.price,
+        salePrice: product.salePrice || undefined,
+        category: product.category,
+        image: product.image,
+        images: product.images || undefined,
+        colors: product.colors || undefined,
+        sizes: product.sizes || undefined,
+        material: product.material || undefined,
+        dimensions: product.dimensions || undefined,
+        weight: product.weight || undefined,
+        capacity: product.capacity || undefined,
+        rating: product.rating || undefined,
+        reviewCount: product.reviewCount || undefined,
+        stock: product.stock || 0,
+      },
+    });
   } catch (error) {
-    console.error("Error fetching product:", error);
-    return NextResponse.json({ message: "Server error" }, { status: 500 });
+    console.error(`Error fetching product ${params.id}:`, error);
+    return NextResponse.json(
+      { message: "Error fetching product" },
+      { status: 500 }
+    );
   }
 }
 

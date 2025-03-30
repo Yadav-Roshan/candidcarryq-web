@@ -4,13 +4,11 @@ export {
   fetchProductById,
   fetchAllProducts,
 } from "./api-client";
-export { mockProducts } from "./api-mock-data";
 
 // Server-only imports and exports below (these will not be included in client bundles)
 import { cache } from "react";
 import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/product.model";
-import { mockProducts } from "./api-mock-data";
 import mongoose from "mongoose";
 
 // Helper to check if ID is a valid MongoDB ObjectId
@@ -90,54 +88,12 @@ export const getAllProducts = cache(async (paramsInput: any = {}) => {
       .skip(skip)
       .limit(limit);
 
-    // For debugging: log how many products matched the filter
+    // Log how many products matched the filter
     console.log(`Found ${products.length} products matching the filters`);
 
     if (products.length === 0) {
-      console.log(
-        "No products found in database, returning filtered mock data"
-      );
-
-      // Apply the same filters to mock data for a consistent experience
-      let filteredMockProducts = [...mockProducts];
-
-      if (category) {
-        filteredMockProducts = filteredMockProducts.filter(
-          (p) => p.category?.toLowerCase() === category.toLowerCase()
-        );
-      }
-
-      if (minPrice !== undefined) {
-        filteredMockProducts = filteredMockProducts.filter(
-          (p) => p.price >= minPrice
-        );
-      }
-
-      if (maxPrice !== undefined) {
-        filteredMockProducts = filteredMockProducts.filter(
-          (p) => p.price <= maxPrice
-        );
-      }
-
-      if (colors && colors.length > 0) {
-        filteredMockProducts = filteredMockProducts.filter((p) => {
-          if (!p.colors) return false;
-          return colors.some((c) =>
-            p.colors.some((pc) => pc.toLowerCase().includes(c.toLowerCase()))
-          );
-        });
-      }
-
-      if (materials && materials.length > 0) {
-        filteredMockProducts = filteredMockProducts.filter((p) => {
-          if (!p.material) return false;
-          return materials.some((m) =>
-            p.material.toLowerCase().includes(m.toLowerCase())
-          );
-        });
-      }
-
-      return filteredMockProducts;
+      console.log("No products found in database");
+      return []; // Return empty array instead of filtered mock data
     }
 
     return products.map((product) => ({
@@ -157,7 +113,7 @@ export const getAllProducts = cache(async (paramsInput: any = {}) => {
     }));
   } catch (error) {
     console.error("Error fetching products:", error);
-    return mockProducts;
+    return []; // Return empty array instead of mock data
   }
 });
 
@@ -167,21 +123,15 @@ export const getProductById = cache(async (id: string) => {
 
     // Check if the ID is a valid MongoDB ObjectId
     if (!isValidObjectId(id)) {
-      console.log(
-        `Product ID ${id} is not a valid ObjectId, checking mock data`
-      );
-      const mockProduct = mockProducts.find((p) => p.id === id);
-      if (!mockProduct) return null;
-      return mockProduct;
+      console.log(`Product ID ${id} is not a valid ObjectId`);
+      return null; // Return null instead of checking mock data
     }
 
     const product = await Product.findById(id);
 
     if (!product) {
-      console.log(`Product ${id} not found, checking mock data`);
-      const mockProduct = mockProducts.find((p) => p.id === id);
-      if (!mockProduct) return null;
-      return mockProduct;
+      console.log(`Product ${id} not found`);
+      return null; // Return null instead of checking mock data
     }
 
     return {
@@ -206,8 +156,7 @@ export const getProductById = cache(async (id: string) => {
     };
   } catch (error) {
     console.error(`Error fetching product ${id}:`, error);
-    const mockProduct = mockProducts.find((p) => p.id === id);
-    return mockProduct || null;
+    return null; // Return null instead of checking mock data
   }
 });
 
@@ -218,8 +167,8 @@ export const getFeaturedProducts = cache(async () => {
     const featuredProducts = await Product.find({ featured: true }).limit(8);
 
     if (featuredProducts.length === 0) {
-      // Return first 4 mock products if no featured products in DB
-      return mockProducts.slice(0, 4);
+      // Return empty array instead of mock products
+      return [];
     }
 
     return featuredProducts.map((product) => ({
@@ -236,6 +185,6 @@ export const getFeaturedProducts = cache(async () => {
     }));
   } catch (error) {
     console.error("Error fetching featured products:", error);
-    return mockProducts.slice(0, 4);
+    return []; // Return empty array instead of mock data
   }
 });

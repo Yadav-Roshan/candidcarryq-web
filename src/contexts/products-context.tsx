@@ -7,41 +7,32 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import { mockProducts } from "@/lib/api-mock-data";
+import { fetchProducts } from "@/lib/client/product-service";
+import { Product } from "@/lib/client/product-service";
 
-// Define the product type based on our mock data structure
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  description?: string;
-  category?: string;
-  salePrice?: number | null;
-  rating?: number;
-  reviewCount?: number;
-  stock?: number;
-  images?: string[];
-  colors?: string[];
-  material?: string;
-  dimensions?: string;
-  weight?: string;
-  capacity?: string;
+interface FilterOptions {
+  minPrice: number;
+  maxPrice: number;
+  colors: string[];
+  materials: string[];
+  categories: string[];
 }
 
 interface ProductsContextType {
   products: Product[];
   isLoading: boolean;
   error: string | null;
-  refreshProducts: () => Promise<void>;
-  filterOptions: {
-    categories: string[];
-    colors: string[];
-    materials: string[];
-    minPrice: number;
-    maxPrice: number;
-  };
+  filterOptions: FilterOptions;
+  refreshProducts: (filters?: any) => Promise<void>;
 }
+
+const defaultFilterOptions: FilterOptions = {
+  minPrice: 0,
+  maxPrice: 10000,
+  colors: [],
+  materials: [],
+  categories: [],
+};
 
 const ProductsContext = createContext<ProductsContextType | undefined>(
   undefined
@@ -51,66 +42,70 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastFetched, setLastFetched] = useState(0);
+  const [filterOptions, setFilterOptions] =
+    useState<FilterOptions>(defaultFilterOptions);
 
-  // Extract unique filter options from products
-  const filterOptions = {
-    categories: [
-      ...new Set(products.map((p) => p.category).filter(Boolean)),
-    ].sort(),
-    colors: [...new Set(products.flatMap((p) => p.colors || []))].sort(),
-    materials: [
-      ...new Set(products.map((p) => p.material).filter(Boolean)),
-    ].sort(),
-    minPrice: products.length ? Math.min(...products.map((p) => p.price)) : 0,
-    maxPrice: products.length
-      ? Math.max(...products.map((p) => p.price))
-      : 10000,
-  };
-
-  // Function to fetch products - for now using mock data
-  const fetchProducts = async () => {
-    setIsLoading(true);
-    setError(null);
-
+  // Function to load products with optional filters
+  const refreshProducts = async (filters = {}) => {
     try {
-      // In the future, this would be an API call
-      // const response = await fetch('/api/products');
-      // const data = await response.json();
+      setIsLoading(true);
+      setError(null);
+      const fetchedProducts = await fetchProducts(filters);
+      setProducts(fetchedProducts);
 
-      // For now, use mock data with a slight delay to simulate network request
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      setProducts(mockProducts);
-      setLastFetched(Date.now());
+      // Analyze products to update filter options
+      updateFilterOptions(fetchedProducts);
     } catch (err) {
-      console.error("Failed to fetch products", err);
-      setError("Failed to load products. Please try again later.");
-      // Fallback to mock data in case of error
-      setProducts(mockProducts);
+      setError("Failed to load products");
+      console.error("Error loading products:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Public refresh function that consumers can call
-  const refreshProducts = async () => {
-    // Only refresh if it's been more than 5 minutes since last fetch
-    const fiveMinutes = 5 * 60 * 1000;
-    if (Date.now() - lastFetched > fiveMinutes) {
-      await fetchProducts();
-    }
+  // Update filter options based on available products
+  const updateFilterOptions = (products: Product[]) => {
+    if (!products || products.length === 0) return;
+
+    let minPrice = Number.MAX_SAFE_INTEGER;
+    let maxPrice = 0;
+    const colorsSet = new Set<string>();
+    const materialsSet = new Set<string>();
+    const categoriesSet = new Set<string>();
+
+    products.forEach((product) => {
+      // Update price range
+      minPrice = Math.min(minPrice, product.price);
+      maxPrice = Math.max(maxPrice, product.price);
+
+      // Update categories
+      if (product.category) {
+        categoriesSet.add(product.category);
+      }
+
+      // Update colors
+      if (product.colors && Array.isArray(product.colors)) {
+        product.colors.forEach((color) => colorsSet.add(color));
+      }
+
+      // Update materials
+      if (product.material) {
+        materialsSet.add(product.material);
+      }
+    });
+
+    setFilterOptions({
+      minPrice: Math.floor(minPrice),
+      maxPrice: Math.ceil(maxPrice),
+      colors: Array.from(colorsSet),
+      materials: Array.from(materialsSet),
+      categories: Array.from(categoriesSet),
+    });
   };
 
-  // Initial fetch on mount
+  // Initial load of products
   useEffect(() => {
-    fetchProducts();
-
-    // Set up a refresh interval - every 30 minutes
-    const intervalId = setInterval(() => {
-      refreshProducts();
-    }, 30 * 60 * 1000);
-
-    return () => clearInterval(intervalId);
+    refreshProducts();
   }, []);
 
   return (
@@ -119,8 +114,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         products,
         isLoading,
         error,
-        refreshProducts,
         filterOptions,
+        refreshProducts,
       }}
     >
       {children}

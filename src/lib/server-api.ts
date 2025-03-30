@@ -3,7 +3,6 @@ import { cache } from "react";
 import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/product.model";
 import mongoose from "mongoose";
-import { mockProducts } from "./api-mock-data";
 
 // Helper to check if ID is a valid MongoDB ObjectId
 function isValidObjectId(id: string): boolean {
@@ -11,15 +10,46 @@ function isValidObjectId(id: string): boolean {
 }
 
 // Server-side only functions with cache
-export const getAllProducts = cache(async (params: any = {}) => {
+export const getAllProducts = cache(async (paramsInput: any = {}) => {
   try {
     await connectToDatabase();
 
-    const { page = 1, limit = 12, category, sort = "newest" } = params;
+    // Handle params that might be a promise
+    const params =
+      paramsInput instanceof Promise ? await paramsInput : paramsInput;
+
+    // Now safely access properties
+    const page = Number(params?.page) || 1;
+    const limit = Number(params?.limit) || 12;
+    const category = params?.category;
+    const sort = params?.sort || "newest";
+    const minPrice = params?.minPrice ? Number(params.minPrice) : undefined;
+    const maxPrice = params?.maxPrice ? Number(params.maxPrice) : undefined;
+    const colors = params?.colors ? params.colors.split(",") : undefined;
+    const materials = params?.materials
+      ? params.materials.split(",")
+      : undefined;
 
     // Build query
     const query: any = {};
     if (category) query.category = category;
+
+    // Price range filter
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      query.price = {};
+      if (minPrice !== undefined) query.price.$gte = minPrice;
+      if (maxPrice !== undefined) query.price.$lte = maxPrice;
+    }
+
+    // Colors filter
+    if (colors && colors.length > 0) {
+      query.colors = { $in: colors.map((c) => new RegExp(c, "i")) };
+    }
+
+    // Materials filter
+    if (materials && materials.length > 0) {
+      query.material = { $in: materials.map((m) => new RegExp(m, "i")) };
+    }
 
     // Determine sort order
     let sortOption = {};
@@ -48,8 +78,8 @@ export const getAllProducts = cache(async (params: any = {}) => {
       .limit(limit);
 
     if (products.length === 0) {
-      console.log("No products found in database, returning mock data");
-      return mockProducts;
+      console.log("No products found in database");
+      return []; // Return empty array instead of mock data
     }
 
     return products.map((product) => ({
@@ -61,13 +91,15 @@ export const getAllProducts = cache(async (params: any = {}) => {
       category: product.category,
       image: product.image,
       images: product.images || undefined,
+      colors: product.colors || undefined,
+      material: product.material || undefined,
       rating: product.rating || undefined,
       reviewCount: product.reviewCount || undefined,
       stock: product.stock || 0,
     }));
   } catch (error) {
     console.error("Error fetching products:", error);
-    return mockProducts;
+    return []; // Return empty array instead of mock data
   }
 });
 
@@ -77,21 +109,15 @@ export const getProductById = cache(async (id: string) => {
 
     // Check if the ID is a valid MongoDB ObjectId
     if (!isValidObjectId(id)) {
-      console.log(
-        `Product ID ${id} is not a valid ObjectId, checking mock data`
-      );
-      const mockProduct = mockProducts.find((p) => p.id === id);
-      if (!mockProduct) return null;
-      return mockProduct;
+      console.log(`Product ID ${id} is not a valid ObjectId`);
+      return null; // Return null instead of checking mock data
     }
 
     const product = await Product.findById(id);
 
     if (!product) {
-      console.log(`Product ${id} not found, checking mock data`);
-      const mockProduct = mockProducts.find((p) => p.id === id);
-      if (!mockProduct) return null;
-      return mockProduct;
+      console.log(`Product ${id} not found`);
+      return null; // Return null instead of checking mock data
     }
 
     return {
@@ -116,8 +142,7 @@ export const getProductById = cache(async (id: string) => {
     };
   } catch (error) {
     console.error(`Error fetching product ${id}:`, error);
-    const mockProduct = mockProducts.find((p) => p.id === id);
-    return mockProduct || null;
+    return null; // Return null instead of checking mock data
   }
 });
 
@@ -128,8 +153,8 @@ export const getFeaturedProducts = cache(async () => {
     const featuredProducts = await Product.find({ featured: true }).limit(8);
 
     if (featuredProducts.length === 0) {
-      // Return first 4 mock products if no featured products in DB
-      return mockProducts.slice(0, 4);
+      // Return empty array if no featured products in DB
+      return [];
     }
 
     return featuredProducts.map((product) => ({
@@ -146,6 +171,6 @@ export const getFeaturedProducts = cache(async () => {
     }));
   } catch (error) {
     console.error("Error fetching featured products:", error);
-    return mockProducts.slice(0, 4);
+    return []; // Return empty array instead of mock data
   }
 });

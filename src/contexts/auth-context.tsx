@@ -67,15 +67,32 @@ const getToken = () => {
   return null;
 };
 
-const setToken = (token: string) => {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("authToken", token);
-  }
-};
-
 const clearToken = () => {
   if (typeof window !== "undefined") {
     localStorage.removeItem("authToken");
+    // Also clear the cookie if present
+    document.cookie =
+      "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+  }
+};
+
+const saveUserToLocalStorage = (user: User) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("user", JSON.stringify(user));
+  }
+};
+
+const getUserFromLocalStorage = (): User | null => {
+  if (typeof window !== "undefined") {
+    const user = localStorage.getItem("user");
+    return user ? JSON.parse(user) : null;
+  }
+  return null;
+};
+
+const clearUserFromLocalStorage = () => {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("user");
   }
 };
 
@@ -83,197 +100,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const router = useRouter();
   const { toast } = useToast();
 
-  // Check if user is already logged in
+  // Check authentication status on initial load
   useEffect(() => {
     const checkAuth = async () => {
-      setIsLoading(true);
       try {
+        setIsLoading(true);
+        setError(null);
+
+        // First check localStorage for existing user data
+        let cachedUser = getUserFromLocalStorage();
+
+        // Get token
         const token = getToken();
+        if (!token) {
+          // No token, not authenticated
+          setUser(null);
+          setIsLoading(false);
+          setIsInitialized(true);
+          return;
+        }
 
-        if (token) {
-          // If we have a token, fetch the user profile
-          const response = await fetch("/api/user/profile", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
+        // If we have cached user data, use it initially to avoid flashing UI
+        if (cachedUser) {
+          setUser(cachedUser);
+        }
 
-          if (response.ok) {
-            const data = await response.json();
-            setUser(data.user);
-          } else {
-            clearToken();
+        // Verify the token with the backend
+        const response = await fetch("/api/user/profile", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          // Token is valid
+          const data = await response.json();
+          setUser(data.user);
+          saveUserToLocalStorage(data.user);
+        } else {
+          // Token is invalid
+          clearToken();
+          clearUserFromLocalStorage();
+          setUser(null);
+
+          // Only show toast if there was a cached user (token expired)
+          if (cachedUser) {
+            toast({
+              title: "Session expired",
+              description: "Please log in again.",
+              variant: "destructive",
+            });
           }
         }
       } catch (error) {
-        console.error("Auth check failed:", error);
-        clearToken();
+        console.error("Auth check error:", error);
+        setError("Failed to check authentication status");
         setUser(null);
       } finally {
         setIsLoading(false);
+        setIsInitialized(true);
       }
     };
 
     checkAuth();
-  }, []);
+  }, [toast]);
 
-  // Update user profile
-  const updateUserProfile = async (
-    userData: Partial<User>
-  ): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const token = getToken();
-      if (!token) throw new Error("Not authenticated");
-
-      const response = await fetch("/api/user/profile", {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          clearToken();
-          throw new Error("Session expired");
-        }
-        const error = await response.json();
-        throw new Error(error.message || "Failed to update profile");
-      }
-
-      const data = await response.json();
-
-      if (data.user) {
-        // Update user data in state
-        setUser((prevUser) =>
-          prevUser ? { ...prevUser, ...data.user } : null
-        );
-
-        toast({
-          title: "Profile updated",
-          description: "Your profile has been updated successfully",
-        });
-
-        return true;
-      } else {
-        setError("Failed to update profile");
-        return false;
-      }
-    } catch (err: any) {
-      setError(err.message || "An error occurred updating profile");
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Update user address specifically
-  const updateUserAddress = async (address: Address): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const token = getToken();
-      if (!token) throw new Error("Not authenticated");
-
-      const response = await fetch("/api/user/address", {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ address }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          clearToken();
-          throw new Error("Session expired");
-        }
-        const error = await response.json();
-        throw new Error(error.message || "Failed to update address");
-      }
-
-      const data = await response.json();
-
-      if (data.user) {
-        // Update user data in state with new address
-        setUser((prevUser) =>
-          prevUser ? { ...prevUser, address: data.user.address } : null
-        );
-
-        toast({
-          title: "Address updated",
-          description: "Your address has been updated successfully",
-        });
-
-        return true;
-      } else {
-        setError("Failed to update address");
-        return false;
-      }
-    } catch (err: any) {
-      setError(err.message || "An error occurred updating address");
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Add account deletion function
-  const deleteAccount = async (): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const token = getToken();
-      if (!token) throw new Error("Not authenticated");
-
-      const response = await fetch("/api/user/delete-account", {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to delete account");
-      }
-
-      // Clear user data after successful deletion
-      clearToken();
-      setUser(null);
-
-      toast({
-        title: "Account deleted",
-        description: "Your account has been permanently deleted",
-      });
-
-      return true;
-    } catch (err: any) {
-      setError(err.message || "Failed to delete account");
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Google login functionality
+  // Handle Google login
   const googleLogin = async (credential: string): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-
     try {
-      // Ensure we're starting with a clean state (important after logout)
-      clearToken();
+      setIsLoading(true);
+      setError(null);
 
       const response = await fetch("/api/auth/google", {
         method: "POST",
@@ -284,24 +184,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Google login failed:", errorData);
-        setError(errorData.message || "Authentication failed");
-        setIsLoading(false);
-        return false;
+        const error = await response.json();
+        throw new Error(error.message || "Google authentication failed");
       }
 
       const data = await response.json();
 
-      // Store token and update user state
-      setToken(data.token);
+      // Save token and user info
+      localStorage.setItem("authToken", data.token);
       setUser(data.user);
+      saveUserToLocalStorage(data.user);
 
       return true;
     } catch (error) {
       console.error("Google login error:", error);
       setError(
-        error instanceof Error ? error.message : "Authentication failed"
+        error instanceof Error
+          ? error.message
+          : "Failed to authenticate with Google"
       );
       return false;
     } finally {
@@ -309,38 +209,108 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Logout function
-  const logout = () => {
-    // First try to clear Google's authentication state
+  // Update user profile
+  const updateUserProfile = async (
+    userData: Partial<User>
+  ): Promise<boolean> => {
     try {
-      if (window.google?.accounts?.id) {
-        // Cancel any current Google auth session
-        window.google.accounts.id.cancel();
-        // Disable auto-select to prevent automatic re-login
-        window.google.accounts.id.disableAutoSelect();
-        console.log("Google auth state cleared");
+      setError(null);
+
+      const token = getToken();
+      if (!token) {
+        setError("Authentication required");
+        return false;
       }
-    } catch (e) {
-      console.log("Error clearing Google auth state:", e);
+
+      const response = await fetch("/api/user/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update profile");
+      }
+
+      const data = await response.json();
+
+      // Update local user state
+      setUser(data.user);
+      saveUserToLocalStorage(data.user);
+
+      return true;
+    } catch (error) {
+      console.error("Profile update error:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to update profile"
+      );
+      return false;
     }
+  };
 
-    // Clear token
+  // Update user address
+  const updateUserAddress = async (address: Address): Promise<boolean> => {
+    // Implement address update logic
+    return await updateUserProfile({ address });
+  };
+
+  // Delete user account
+  const deleteAccount = async (): Promise<boolean> => {
+    try {
+      setError(null);
+
+      const token = getToken();
+      if (!token) {
+        setError("Authentication required");
+        return false;
+      }
+
+      const response = await fetch("/api/user/delete-account", {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete account");
+      }
+
+      // Clear auth data
+      clearToken();
+      clearUserFromLocalStorage();
+      setUser(null);
+
+      // Also clear cart from localStorage when logging out
+      localStorage.removeItem("cart");
+
+      return true;
+    } catch (error) {
+      console.error("Account deletion error:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to delete account"
+      );
+      return false;
+    }
+  };
+
+  // Logout
+  const logout = () => {
     clearToken();
-
-    // Clear user state
+    clearUserFromLocalStorage();
     setUser(null);
 
-    // Force page refresh to clear all client-side state
-    // This is the most reliable way to reset Google auth completely
-    setTimeout(() => {
-      window.location.href = "/login?refresh=true";
-    }, 100);
+    // Also clear user-specific data from localStorage when logging out
+    // But keep the cart data for guest users
+    const cartData = localStorage.getItem("cart");
 
-    // Show toast notification
-    toast({
-      title: "Logged out",
-      description: "You have been logged out successfully",
-    });
+    // Reload the page to clear all state
+    router.push("/login?refresh=true");
   };
 
   return (
@@ -351,7 +321,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateUserAddress,
         deleteAccount,
         logout,
-        isLoading,
+        isLoading: isLoading || !isInitialized,
         error,
         googleLogin,
       }}

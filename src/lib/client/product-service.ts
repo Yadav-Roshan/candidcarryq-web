@@ -1,7 +1,5 @@
 // Client-safe API utility for products data
 
-import { mockProducts } from "../api-mock-data";
-
 // Types that are safe to use on the client
 export interface Product {
   id: string;
@@ -42,18 +40,16 @@ export async function fetchProducts(filters = {}) {
     const response = await fetch(url);
 
     if (!response.ok) {
-      // If server fails, fall back to mock data
-      console.error("Failed to fetch products from API, using mock data");
-      return mockProducts;
+      console.error("Failed to fetch products from API");
+      return [];
     }
 
     // Extract products from the response
     const data = await response.json();
-    return data.products;
+    return data.products || [];
   } catch (error) {
     console.error("Error fetching products:", error);
-    // Fall back to mock data in case of error
-    return mockProducts;
+    return [];
   }
 }
 
@@ -63,13 +59,13 @@ export async function getFeaturedProducts() {
     const response = await fetch("/api/admin/featured-products");
 
     if (!response.ok) {
-      return mockProducts.filter((p) => p.isFeatured).slice(0, 4);
+      return [];
     }
 
     return await response.json();
   } catch (error) {
     console.error("Error fetching featured products:", error);
-    return mockProducts.filter((p) => p.isFeatured).slice(0, 4);
+    return [];
   }
 }
 

@@ -7,9 +7,9 @@ import { ProductCard } from "@/components/products/product-card";
 import Link from "next/link";
 
 export default function WishlistContent() {
-  const { items, clearWishlist } = useWishlist();
+  const { wishlistItems, clearWishlist } = useWishlist();
 
-  if (items.length === 0) {
+  if (wishlistItems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <Heart className="h-16 w-16 text-muted-foreground mb-4" />
@@ -28,7 +28,7 @@ export default function WishlistContent() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <p className="text-muted-foreground">
-          {items.length} {items.length === 1 ? "item" : "items"}
+          {wishlistItems.length} {wishlistItems.length === 1 ? "item" : "items"}
         </p>
 
         <Button
@@ -42,7 +42,7 @@ export default function WishlistContent() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {items.map((product) => (
+        {wishlistItems.map((product) => (
           <ProductCard
             key={product.id}
             id={product.id}

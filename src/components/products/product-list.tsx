@@ -1,16 +1,15 @@
-"use client";
+// Assuming you have a product-list.tsx file, if not, create one
 
-import React from "react";
 import { Product } from "@/lib/client/product-service";
-import { ProductCard } from "@/components/products/product-card";
-import { NoProducts } from "@/components/products/no-products";
+import { ProductCard } from "./product-card";
+import { NoProducts } from "./no-products";
 
-interface ProductGridProps {
+interface ProductListProps {
   products: Product[];
   isLoading?: boolean;
 }
 
-export function ProductGrid({ products, isLoading = false }: ProductGridProps) {
+export function ProductList({ products, isLoading = false }: ProductListProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
