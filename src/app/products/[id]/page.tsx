@@ -1,44 +1,53 @@
-import { Metadata } from "next"
-import { notFound } from "next/navigation"
-import { getProductById } from "@/lib/api"
-import { formatPrice } from "@/lib/utils"
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
-import { ProductDetails } from "@/components/products/product-details"
-import { ProductRecommendations } from "@/components/products/product-recommendations"
+import { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import { ProductDetails } from "@/components/products/product-details";
+import { ProductReviews } from "@/components/products/product-reviews";
+import { ProductRecommendations } from "@/components/products/product-recommendations";
+import { getProductById } from "@/lib/api";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 interface ProductPageProps {
-  params: {
-    id: string
-  }
+  params: { id: string };
 }
 
 export async function generateMetadata({
   params,
 }: ProductPageProps): Promise<Metadata> {
-  const product = await getProductById(params.id)
-  
+  // Make sure params is resolved before accessing its properties
+  const resolvedParams = params instanceof Promise ? await params : params;
+  const product = await getProductById(resolvedParams.id);
+
   if (!product) {
     return {
       title: "Product Not Found",
       description: "The requested product could not be found",
-    }
+    };
   }
-  
+
   return {
     title: `${product.name} - CandidWear`,
-    description: product.description || "Explore this premium product at CandidWear",
-  }
+    description: product.description || "Product details",
+  };
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
-  const product = await getProductById(params.id)
-  
+  // Make sure params is resolved before accessing its properties
+  const resolvedParams = params instanceof Promise ? await params : params;
+  const product = await getProductById(resolvedParams.id);
+
   if (!product) {
-    notFound()
+    notFound();
   }
-  
+
   return (
-    <div className="container py-8">
+    <div className="container py-10">
       {/* Breadcrumbs */}
       <Breadcrumb className="mb-8">
         <BreadcrumbList>
@@ -53,7 +62,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
           {product.category && (
             <>
               <BreadcrumbItem>
-                <BreadcrumbLink href={`/categories/${product.category}`} className="capitalize">
+                <BreadcrumbLink
+                  href={`/categories/${product.category}`}
+                  className="capitalize"
+                >
                   {product.category}
                 </BreadcrumbLink>
               </BreadcrumbItem>
@@ -67,18 +79,27 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      
+
       {/* Main product details */}
       <ProductDetails product={product} />
-      
-      {/* Related products */}
-      <div className="mt-20">
-        <h2 className="text-2xl font-bold mb-6">You might also like</h2>
-        <ProductRecommendations 
-          productId={product.id} 
-          category={product.category}
+
+      {/* Product Reviews - New section */}
+      <div className="mt-16">
+        <ProductReviews
+          productId={product.id}
+          reviewCount={product.reviewCount || 0}
         />
       </div>
+
+      {/* Related products */}
+      <div className="mt-20">
+        <Suspense fallback={<div>Loading recommendations...</div>}>
+          <ProductRecommendations
+            productId={product.id}
+            category={product.category}
+          />
+        </Suspense>
+      </div>
     </div>
-  )
+  );
 }

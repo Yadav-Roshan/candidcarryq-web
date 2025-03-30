@@ -3,7 +3,8 @@ export const mockProducts = [
   {
     id: "1",
     name: "Urban Commuter Backpack",
-    description: "A stylish and functional backpack for daily commuting. Features a padded laptop sleeve and multiple compartments.",
+    description:
+      "A stylish and functional backpack for daily commuting. Features a padded laptop sleeve and multiple compartments.",
     price: 3500,
     category: "backpacks",
     image: "https://placehold.co/600x600?text=Backpack",
@@ -12,12 +13,13 @@ export const mockProducts = [
     reviewCount: 12,
     material: "Water-resistant polyester",
     dimensions: "30 x 45 x 15 cm",
-    capacity: "25 liters"
+    capacity: "25 liters",
   },
   {
     id: "2",
     name: "Designer Tote Bag",
-    description: "Elegant tote bag with spacious interior. Perfect for work or casual outings.",
+    description:
+      "Elegant tote bag with spacious interior. Perfect for work or casual outings.",
     price: 5600,
     category: "handbags",
     image: "https://placehold.co/600x600?text=Tote",
@@ -25,12 +27,13 @@ export const mockProducts = [
     rating: 4.8,
     reviewCount: 24,
     material: "Premium vegan leather",
-    dimensions: "40 x 30 x 12 cm"
+    dimensions: "40 x 30 x 12 cm",
   },
   {
     id: "3",
     name: "Weekend Travel Bag",
-    description: "Durable travel bag with ample storage for short trips. Includes a shoe compartment.",
+    description:
+      "Durable travel bag with ample storage for short trips. Includes a shoe compartment.",
     price: 7500,
     salePrice: 6750,
     category: "travel",
@@ -40,12 +43,13 @@ export const mockProducts = [
     reviewCount: 18,
     material: "Canvas with leather trim",
     dimensions: "55 x 35 x 25 cm",
-    capacity: "40 liters"
+    capacity: "40 liters",
   },
   {
     id: "4",
     name: "Slim Bifold Wallet",
-    description: "Sleek, minimalist wallet with RFID protection. Holds up to 8 cards plus cash.",
+    description:
+      "Sleek, minimalist wallet with RFID protection. Holds up to 8 cards plus cash.",
     price: 1600,
     category: "wallets",
     image: "https://placehold.co/600x600?text=Wallet",
@@ -53,12 +57,13 @@ export const mockProducts = [
     rating: 4.0,
     reviewCount: 35,
     material: "Genuine leather",
-    dimensions: "11 x 9 x 1.5 cm"
+    dimensions: "11 x 9 x 1.5 cm",
   },
   {
     id: "5",
     name: "Crossbody Sling Bag",
-    description: "Lightweight and compact sling bag for essentials. Water-resistant with anti-theft features.",
+    description:
+      "Lightweight and compact sling bag for essentials. Water-resistant with anti-theft features.",
     price: 2800,
     category: "handbags",
     image: "https://placehold.co/600x600?text=Sling+Bag",
@@ -67,12 +72,13 @@ export const mockProducts = [
     reviewCount: 14,
     material: "Nylon",
     dimensions: "20 x 30 x 10 cm",
-    capacity: "7 liters"
+    capacity: "7 liters",
   },
   {
     id: "6",
     name: "Leather Messenger Bag",
-    description: "Classic messenger bag with adjustable strap and multiple pockets for organization.",
+    description:
+      "Classic messenger bag with adjustable strap and multiple pockets for organization.",
     price: 4800,
     category: "backpacks",
     image: "https://placehold.co/600x600?text=Messenger",
@@ -81,6 +87,6 @@ export const mockProducts = [
     reviewCount: 42,
     material: "Full-grain leather",
     dimensions: "38 x 28 x 10 cm",
-    capacity: "15 liters"
+    capacity: "15 liters",
   },
 ];

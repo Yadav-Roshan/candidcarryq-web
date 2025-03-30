@@ -1,64 +1,37 @@
-import { Suspense } from "react"
-import { Metadata } from "next"
-import { getAllProducts } from "@/lib/api"
-import { ProductGrid } from "@/components/products/product-grid"
-import { 
-  Pagination, 
-  PaginationContent, 
-  PaginationItem, 
-  PaginationNext, 
-  PaginationPrevious 
-} from "@/components/ui/pagination"
-import ProductFilters from "@/components/products/product-filters"
-import ProductSort from "@/components/products/product-sort"
-import ProductsLoading from "@/components/products/products-loading"
+import { Suspense } from "react";
+import { ProductsPageClientWithProvider } from "./client-page-with-provider";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'All Products - MyBags',
-  description: 'Browse our complete collection of bags and accessories',
+  title: "Products - CandidWear",
+  description: "Browse our collection of high-quality bags and accessories",
+};
+
+function ProductsGridSkeleton() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {Array(8)
+        .fill(null)
+        .map((_, i) => (
+          <div key={i} className="space-y-3">
+            <Skeleton className="h-52 w-full rounded-lg" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
+        ))}
+    </div>
+  );
 }
 
-export const dynamic = 'force-dynamic'
-
-export default async function ProductsPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined }
-}) {
-  // Convert searchParams to the correct types
-  const page = searchParams.page ? parseInt(searchParams.page as string) : 1
-  const category = typeof searchParams.category === "string" ? searchParams.category : undefined
-  const sort = typeof searchParams.sort === "string" ? searchParams.sort : undefined
-
-  // Fetch products with the filters
-  const products = await getAllProducts({ page, category, sort })
-
+export default function ProductsPage() {
   return (
-    <div className="container py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">All Products</h1>
-        <ProductFilters />
-      </div>
-      
-      <Suspense fallback={<ProductsLoading />}>
-        <ProductGrid products={products} />
+    <div className="container py-10">
+      <h1 className="text-3xl font-bold mb-6">All Products</h1>
+
+      <Suspense fallback={<ProductsGridSkeleton />}>
+        <ProductsPageClientWithProvider />
       </Suspense>
-      
-      <div className="mt-12">
-        <Pagination>
-          <PaginationContent>
-            {page > 1 && (
-              <PaginationItem>
-                <PaginationPrevious href={`/products?page=${page - 1}`} />
-              </PaginationItem>
-            )}
-            <PaginationItem>Page {page}</PaginationItem>
-            <PaginationItem>
-              <PaginationNext href={`/products?page=${page + 1}`} />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      </div>
     </div>
-  )
+  );
 }
