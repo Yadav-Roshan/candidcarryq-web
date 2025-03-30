@@ -16,6 +16,7 @@ interface CheckoutSummaryProps {
   subtotal: number;
   tax: number;
   shipping: number;
+  discount?: number; // Add discount prop
   total: number;
 }
 
@@ -24,6 +25,7 @@ export default function CheckoutSummary({
   subtotal,
   tax,
   shipping,
+  discount = 0, // Default to 0 if not provided
   total,
 }: CheckoutSummaryProps) {
   return (
@@ -77,6 +79,15 @@ export default function CheckoutSummary({
             <span className="text-muted-foreground">Subtotal</span>
             <span>{formatNPR(subtotal)}</span>
           </div>
+
+          {/* Show discount if it exists */}
+          {discount > 0 && (
+            <div className="flex justify-between text-green-600">
+              <span className="text-muted-foreground">Discount</span>
+              <span>-{formatNPR(discount)}</span>
+            </div>
+          )}
+
           <div className="flex justify-between">
             <span className="text-muted-foreground">Shipping</span>
             <span>{shipping === 0 ? "Free" : formatNPR(shipping)}</span>

@@ -23,12 +23,14 @@ export interface IOrder extends Document {
   items: IOrderItem[];
   totalAmount: number;
   shippingAddress: {
-    street: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
+    phoneNumber: string;
+    buildingName?: string;
+    locality: string;
     wardNo?: string;
+    postalCode: string;
+    district: string;
+    province: string;
+    country: string;
     landmark?: string;
   };
   paymentMethod: string;
@@ -42,8 +44,9 @@ export interface IOrder extends Document {
   deliveryOtp?: string;
   shippingCost: number;
   taxAmount: number;
-  discount?: number;
-  promoCode?: string;
+  discount: number;
+  promoCode: string | null;
+  promoCodeDiscount: number;
   notes?: string;
   statusHistory: IStatusHistoryEntry[];
   createdAt: Date;
@@ -92,17 +95,22 @@ const OrderSchema = new Schema<IOrder>(
       required: [true, "Total amount is required"],
     },
     shippingAddress: {
-      street: {
+      phoneNumber: {
         type: String,
-        required: [true, "Street address is required"],
+        required: [true, "Phone number is required"],
       },
-      city: {
+      buildingName: String,
+      locality: {
         type: String,
-        required: [true, "City is required"],
+        required: [true, "Locality/Area is required"],
       },
-      state: {
+      district: {
         type: String,
-        required: [true, "State is required"],
+        required: [true, "District is required"],
+      },
+      province: {
+        type: String,
+        required: [true, "Province is required"],
       },
       postalCode: {
         type: String,
@@ -153,8 +161,18 @@ const OrderSchema = new Schema<IOrder>(
       type: Number,
       default: 0,
     },
-    discount: Number,
-    promoCode: String,
+    discount: {
+      type: Number,
+      default: 0,
+    },
+    promoCode: {
+      type: String,
+      default: null,
+    },
+    promoCodeDiscount: {
+      type: Number,
+      default: 0,
+    },
     notes: String,
     statusHistory: [
       {

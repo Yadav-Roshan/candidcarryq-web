@@ -58,12 +58,14 @@ interface OrderItem {
 }
 
 interface OrderAddress {
-  street: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
+  phoneNumber: string;
+  buildingName?: string;
+  locality: string;
   wardNo?: string;
+  postalCode: string;
+  district: string;
+  province: string;
+  country: string;
   landmark?: string;
 }
 
@@ -87,6 +89,7 @@ interface Order {
   taxAmount: number;
   discount?: number;
   promoCode?: string;
+  promoCodeDiscount?: number; // Add promoCodeDiscount field
   trackingNumber?: string;
   notes?: string;
   createdAt: string;
@@ -96,6 +99,9 @@ interface Order {
     timestamp: string;
     note?: string;
   }>;
+  delivererName?: string;
+  delivererPhone?: string;
+  deliveryOtp?: string;
 }
 
 export default function AdminOrderDetailPage() {
@@ -132,7 +138,8 @@ export default function AdminOrderDetailPage() {
         return;
       }
 
-      const response = await fetch(`/api/orders/${orderId}`, {
+      // Fetch order data
+      const response = await fetch(`/api/admin/orders/${orderId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -142,15 +149,84 @@ export default function AdminOrderDetailPage() {
         throw new Error("Failed to fetch order");
       }
 
-      const order = await response.json();
+      const data = await response.json();
+      console.log("API returned order data:", data);
 
-      // Ensure data has the order property
-      if (order) {
-        setOrder(order);
+      // Check if we received an order and transform it to match our interface
+      if (data && data.order) {
+        // Store temporary order data
+        let tempOrderData = data.order;
+        let userData = {
+          _id: tempOrderData.user?._id || "",
+          name: tempOrderData.user?.name || "Unknown Customer",
+          email: tempOrderData.user?.email || "No email provided",
+        };
+
+        // If user data is incomplete, try to fetch it directly
+        if (!tempOrderData.user?.name || !tempOrderData.user?.email) {
+          try {
+            const userResponse = await fetch(
+              `/api/admin/users/${
+                tempOrderData.user?._id || tempOrderData.user
+              }`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (userResponse.ok) {
+              const userInfo = await userResponse.json();
+              if (userInfo && userInfo.user) {
+                userData = {
+                  _id: userInfo.user._id || "",
+                  name: userInfo.user.name || "Unknown Customer",
+                  email: userInfo.user.email || "No email provided",
+                };
+                console.log("Successfully fetched user data:", userData);
+              }
+            }
+          } catch (userError) {
+            console.error("Error fetching user details:", userError);
+          }
+        }
+
+        // Transform API response to match our Order interface
+        const transformedOrder: Order = {
+          _id: tempOrderData._id || tempOrderData.id || "",
+          orderNumber: tempOrderData.orderNumber || "",
+          user: userData,
+          items: tempOrderData.items || [],
+          totalAmount: tempOrderData.totalAmount || tempOrderData.total || 0,
+          shippingAddress: tempOrderData.shippingAddress || {},
+          paymentMethod: tempOrderData.paymentMethod || "",
+          transactionRef: tempOrderData.transactionRef || "",
+          paymentProofImage: tempOrderData.paymentProofImage || "",
+          paymentStatus: tempOrderData.paymentStatus || "pending",
+          orderStatus:
+            tempOrderData.orderStatus || tempOrderData.status || "pending",
+          shippingCost: tempOrderData.shippingCost || 0,
+          taxAmount: tempOrderData.taxAmount || 0,
+          discount: tempOrderData.discount || 0,
+          promoCode: tempOrderData.promoCode || undefined,
+          promoCodeDiscount:
+            tempOrderData.promoCodeDiscount || tempOrderData.discount || 0,
+          trackingNumber: tempOrderData.trackingNumber || "",
+          notes: tempOrderData.notes || "",
+          createdAt: tempOrderData.createdAt || "",
+          updatedAt: tempOrderData.updatedAt || "",
+          statusHistory: tempOrderData.statusHistory || [],
+          delivererName: tempOrderData.delivererName || "",
+          delivererPhone: tempOrderData.delivererPhone || "",
+          deliveryOtp: tempOrderData.deliveryOtp || "",
+        };
+
+        setOrder(transformedOrder);
 
         // Check stock levels for items if payment is pending
-        if (order.paymentStatus === "pending") {
-          await checkStockLevels(order.items);
+        if (transformedOrder.paymentStatus === "pending") {
+          await checkStockLevels(transformedOrder.items);
         }
       } else {
         // Handle the case when order data is missing
@@ -182,23 +258,47 @@ export default function AdminOrderDetailPage() {
       const token = localStorage.getItem("authToken");
       if (!token) return;
 
-      const productIds = items.map((item) => item.product);
+      // Filter out items with invalid product IDs
+      const validItems = items.filter(
+        (item) =>
+          item.product &&
+          item.product !== "undefined" &&
+          item.product.length > 0
+      );
 
-      if (productIds.length === 0) return;
+      if (validItems.length === 0) return;
 
-      const queryString = productIds.map((id) => `id=${id}`).join("&");
+      const productIds = validItems.map((item) => item.product);
+      console.log("Checking stock for product IDs:", productIds);
+
+      // Build query string with only valid product IDs
+      const queryString = productIds
+        .filter((id) => id && id !== "undefined")
+        .map((id) => `id=${id}`)
+        .join("&");
+
+      if (!queryString) {
+        console.log("No valid product IDs to check stock for");
+        return;
+      }
+
       const response = await fetch(`/api/admin/products/stock?${queryString}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) return;
+      if (!response.ok) {
+        console.error("Stock check API error:", await response.text());
+        return;
+      }
 
       const data = await response.json();
       const stockInfo = data.products.reduce(
         (acc: Record<string, number>, product: any) => {
-          acc[product._id] = product.stock;
+          if (product && product._id) {
+            acc[product._id] = product.stock;
+          }
           return acc;
         },
         {}
@@ -207,7 +307,7 @@ export default function AdminOrderDetailPage() {
       setStockData(stockInfo);
 
       // Check if any product will be out of stock after verification
-      const willBeOutOfStock = items.some((item) => {
+      const willBeOutOfStock = validItems.some((item) => {
         const currentStock = stockInfo[item.product] || 0;
         return currentStock < item.quantity;
       });
@@ -234,6 +334,17 @@ export default function AdminOrderDetailPage() {
           variant: "destructive",
         });
         router.push("/login");
+        return;
+      }
+
+      // Add check for duplicate status to prevent multiple entries
+      if (order && order[statusType] === value) {
+        toast({
+          title: "Status Already Updated",
+          description: `The order is already in '${value}' status.`,
+          variant: "default",
+        });
+        setIsUpdating(false);
         return;
       }
 
@@ -317,7 +428,6 @@ export default function AdminOrderDetailPage() {
       }
 
       const data = await response.json();
-      setOrder(data.order);
 
       toast({
         title: "Status Updated",
@@ -332,6 +442,16 @@ export default function AdminOrderDetailPage() {
       setDeliveryOtp("");
       setNote("");
 
+      // Update local order state to reflect changes immediately
+      // This will ensure UI updates without requiring page refresh
+      if (order) {
+        setOrder({
+          ...order,
+          [statusType]: value,
+          statusHistory: data.order?.statusHistory || order.statusHistory || [],
+        });
+      }
+
       // If payment was verified, refresh the page to update stock information
       if (statusType === "paymentStatus" && value === "verified") {
         fetchOrder();
@@ -343,7 +463,7 @@ export default function AdminOrderDetailPage() {
     }
   };
 
-  // Handle approval (tick button) - Remove tracking number validation for shipping
+  // Handle approval (tick button) - Improve logic to prevent duplicate status entries
   const handleApproveStatus = (
     statusType: "paymentStatus" | "orderStatus",
     currentStatus: string
@@ -359,7 +479,7 @@ export default function AdminOrderDetailPage() {
           nextStatus = "processing";
           break;
         case "processing":
-          nextStatus = "shipped"; // No tracking validation required now
+          nextStatus = "shipped";
           break;
         case "shipped":
           nextStatus = "delivered";
@@ -367,6 +487,15 @@ export default function AdminOrderDetailPage() {
         default:
           nextStatus = currentStatus;
       }
+    }
+
+    // Check if we're trying to set the same status (prevent duplicate entries)
+    if (nextStatus && nextStatus === currentStatus) {
+      toast({
+        title: "No Change Needed",
+        description: `Order is already in ${nextStatus} status.`,
+      });
+      return;
     }
 
     // When marking as shipped, make sure deliverer details are provided
@@ -405,7 +534,7 @@ export default function AdminOrderDetailPage() {
               statusNote = "Order is being processed";
               break;
             case "shipped":
-              statusNote = "Order shipped"; // No tracking number in note
+              statusNote = "Order shipped";
               break;
             case "delivered":
               statusNote = "Order successfully delivered";
@@ -637,8 +766,7 @@ export default function AdminOrderDetailPage() {
                         <p className="font-medium">
                           {order.paymentMethod === "mobile_banking"
                             ? "Mobile Banking"
-                            : order.paymentMethod.charAt(0).toUpperCase() +
-                              order.paymentMethod.slice(1)}
+                            : order.paymentMethod}
                         </p>
                       </div>
                       <div>
@@ -993,7 +1121,7 @@ export default function AdminOrderDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {order.items.map((item, index) => (
+                    {(order.items || []).map((item, index) => (
                       <TableRow key={index}>
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -1180,8 +1308,12 @@ export default function AdminOrderDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-1 mb-4">
-                <h3 className="font-medium">{order.user.name}</h3>
-                <p className="text-muted-foreground">{order.user.email}</p>
+                <h3 className="font-medium">
+                  {order.user?.name || "Unknown Customer"}
+                </h3>
+                <p className="text-muted-foreground">
+                  {order.user?.email || "No email provided"}
+                </p>
               </div>
 
               <Separator className="my-4" />
@@ -1190,8 +1322,17 @@ export default function AdminOrderDetailPage() {
                 <div>
                   <h3 className="font-medium mb-2">Shipping Address</h3>
                   <div className="text-sm bg-muted/30 p-3 rounded-md space-y-1">
-                    {/* Show building name if available */}
-                    {order.shippingAddress.buildingName && (
+                    {/* Phone number (required) */}
+                    <p>
+                      <span className="font-medium text-muted-foreground">
+                        Phone:
+                      </span>{" "}
+                      {order.shippingAddress?.phoneNumber ||
+                        "No phone provided"}
+                    </p>
+
+                    {/* Building name (optional) */}
+                    {order.shippingAddress?.buildingName && (
                       <p>
                         <span className="font-medium text-muted-foreground">
                           Building/House:
@@ -1200,15 +1341,16 @@ export default function AdminOrderDetailPage() {
                       </p>
                     )}
 
+                    {/* Locality/Area (required) */}
                     <p>
                       <span className="font-medium text-muted-foreground">
-                        Street/Locality:
+                        Locality/Area:
                       </span>{" "}
-                      {order.shippingAddress.street}
+                      {order.shippingAddress?.locality || "Not specified"}
                     </p>
 
-                    {/* Show ward number if available */}
-                    {order.shippingAddress.wardNo && (
+                    {/* Ward number (optional) */}
+                    {order.shippingAddress?.wardNo && (
                       <p>
                         <span className="font-medium text-muted-foreground">
                           Ward:
@@ -1217,51 +1359,45 @@ export default function AdminOrderDetailPage() {
                       </p>
                     )}
 
+                    {/* District (required) */}
                     <p>
                       <span className="font-medium text-muted-foreground">
-                        City/District:
+                        District:
                       </span>{" "}
-                      {order.shippingAddress.city}
+                      {order.shippingAddress?.district || "Not specified"}
                     </p>
 
+                    {/* Province (required) */}
                     <p>
                       <span className="font-medium text-muted-foreground">
-                        State/Province:
+                        Province:
                       </span>{" "}
-                      {order.shippingAddress.state}
+                      {order.shippingAddress?.province || "Not specified"}
                     </p>
 
+                    {/* Postal Code (required) */}
                     <p>
                       <span className="font-medium text-muted-foreground">
                         Postal Code:
                       </span>{" "}
-                      {order.shippingAddress.postalCode}
+                      {order.shippingAddress?.postalCode || "Not specified"}
                     </p>
 
+                    {/* Country (required) */}
                     <p>
                       <span className="font-medium text-muted-foreground">
                         Country:
                       </span>{" "}
-                      {order.shippingAddress.country}
+                      {order.shippingAddress?.country || "Not specified"}
                     </p>
 
-                    {/* Show landmark if available */}
-                    {order.shippingAddress.landmark && (
+                    {/* Landmark (optional) */}
+                    {order.shippingAddress?.landmark && (
                       <p>
                         <span className="font-medium text-muted-foreground">
                           Landmark:
                         </span>{" "}
                         {order.shippingAddress.landmark}
-                      </p>
-                    )}
-
-                    {/* Show phone number if available */}
-                    {order.shippingAddress.phoneNumber && (
-                      <p>
-                        <span className="font-medium text-muted-foreground">
-                          Phone:
-                        </span>{" "}
-                        {order.shippingAddress.phoneNumber}
                       </p>
                     )}
                   </div>

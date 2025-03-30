@@ -7,23 +7,26 @@ import { useRouter } from "next/navigation";
 import { Trash2, ShoppingBag } from "lucide-react";
 import { useCart } from "@/contexts/cart-context";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { formatPrice } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function CartContent() {
   const router = useRouter();
-  const { cartItems, removeFromCart, updateQuantity, clearCart, subtotal } =
-    useCart();
-  const [promoCode, setPromoCode] = useState("");
+  const { cartItems, removeFromCart, updateQuantity, clearCart } = useCart();
+  const { toast } = useToast();
 
-  // Calculate shipping based on subtotal
+  // Calculate order summary values with sale prices
+  const subtotal = cartItems.reduce(
+    (total, item) => total + (item.salePrice || item.price) * item.quantity,
+    0
+  );
   const shipping = subtotal >= 5000 ? 0 : 250;
   const tax = Math.round(subtotal * 0.13); // 13% tax
   const total = subtotal + shipping + tax;
 
   const handleCheckout = () => {
-    // Navigate to checkout page
+    // Navigate to checkout page where promocodes will be applied
     router.push("/checkout");
   };
 
@@ -207,26 +210,18 @@ export default function CartContent() {
             <span>{formatPrice(tax)}</span>
           </div>
 
-          {/* Promo Code Input */}
-          <div className="mt-6 mb-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Promo code"
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value)}
-                className="flex-1"
-              />
-              <Button variant="outline">Apply</Button>
-            </div>
-          </div>
-
           <Separator className="my-4" />
 
           {/* Total */}
           <div className="flex justify-between mb-6">
-            <span className="font-medium">Total</span>
+            <span className="font-medium">Estimated Total</span>
             <span className="font-bold text-lg">{formatPrice(total)}</span>
           </div>
+
+          {/* Note about promocodes */}
+          <p className="text-xs text-muted-foreground mb-4">
+            Promo codes can be applied during checkout
+          </p>
 
           {/* Checkout Button */}
           <Button className="w-full" size="lg" onClick={handleCheckout}>

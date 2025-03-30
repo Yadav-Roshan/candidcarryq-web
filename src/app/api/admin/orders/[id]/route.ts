@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Order from "@/models/order.model";
 import Product from "@/models/product.model";
+import User from "@/models/user.model";
 import { authenticate, isAdmin } from "@/middleware/auth.middleware";
+import mongoose from "mongoose";
 import { z } from "zod";
 
 // Schema for updating order status - ensure values match the Order model
@@ -36,39 +38,89 @@ function generateOTP(): string {
 // GET - Get order details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } | Promise<{ id: string }> } // Update type to handle Promise
 ) {
   try {
-    await connectToDatabase();
-
     // Authentication middleware
-    const user = await authenticate(request);
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status }
+      );
     }
 
-    // Get order details
-    const order = await Order.findById(params.id).lean();
+    // Admin check
+    if (!isAdmin(authResult.user)) {
+      return NextResponse.json(
+        { message: "Access denied - Admin only" },
+        { status: 403 }
+      );
+    }
+
+    // Resolve params if it's a Promise
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const id = resolvedParams.id;
+
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { message: "Invalid order ID format" },
+        { status: 400 }
+      );
+    }
+
+    await connectToDatabase();
+
+    // Find the order and include complete order details in response
+    const order = await Order.findById(id).populate({
+      path: "user",
+      select: "name email", // Include user details
+    });
 
     if (!order) {
       return NextResponse.json({ message: "Order not found" }, { status: 404 });
     }
 
-    // Check if user is authorized to view this order
-    if (
-      user.role !== "admin" &&
-      order.user.toString() !== user._id.toString()
-    ) {
-      return NextResponse.json(
-        { message: "Not authorized to view this order" },
-        { status: 403 }
-      );
-    }
+    // Format order data for frontend
+    const formattedOrder = {
+      _id: order._id.toString(),
+      orderNumber: order.orderNumber,
+      user: {
+        _id: order.user._id.toString(),
+        name: order.user.name,
+        email: order.user.email,
+      },
+      items: order.items,
+      totalAmount: order.totalAmount,
+      shippingAddress: order.shippingAddress,
+      paymentMethod: order.paymentMethod,
+      transactionRef: order.transactionRef,
+      paymentProofImage: order.paymentProofImage,
+      paymentStatus: order.paymentStatus,
+      orderStatus: order.orderStatus,
+      shippingCost: order.shippingCost,
+      taxAmount: order.taxAmount,
+      discount: order.discount,
+      promoCode: order.promoCode,
+      promoCodeDiscount: order.promoCodeDiscount, // Include promoCodeDiscount
+      trackingNumber: order.trackingNumber,
+      notes: order.notes,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      statusHistory: order.statusHistory,
+      delivererName: order.delivererName,
+      delivererPhone: order.delivererPhone,
+      deliveryOtp: order.deliveryOtp,
+    };
 
-    return NextResponse.json({ order });
+    return NextResponse.json({ order: formattedOrder });
   } catch (error) {
-    console.error("Order API error:", error);
-    return NextResponse.json({ message: "Server error" }, { status: 500 });
+    console.error("Error fetching order:", error);
+    return NextResponse.json(
+      { message: "Error fetching order details" },
+      { status: 500 }
+    );
   }
 }
 
@@ -82,7 +134,6 @@ export async function PUT(
 
     // Authentication middleware
     const authResult = await authenticate(request);
-    console.log("Auth result:", authResult);
 
     if (authResult.status !== 200) {
       return NextResponse.json(
@@ -129,6 +180,19 @@ export async function PUT(
     }
 
     const updateData = validationResult.data;
+
+    // Check if the status is actually changing to avoid duplicate entries
+    if (
+      (updateData.orderStatus &&
+        updateData.orderStatus === currentOrder.orderStatus) ||
+      (updateData.paymentStatus &&
+        updateData.paymentStatus === currentOrder.paymentStatus)
+    ) {
+      return NextResponse.json({
+        message: "No change in status",
+        order: currentOrder,
+      });
+    }
 
     // Check if changing from processing to shipped
     const isShipping =
@@ -205,11 +269,22 @@ export async function PUT(
       updateOperation.$set.deliveryOtp = updateData.deliveryOtp;
     }
 
-    // Add status history entry if provided
+    // Add status history entry if provided and avoid duplicates
     if (updateData.statusHistoryEntry) {
-      updateOperation.$push = {
-        statusHistory: updateData.statusHistoryEntry,
-      };
+      // Check if this exact status is the most recent one to avoid duplicates
+      const mostRecentEntry = currentOrder.statusHistory?.[0];
+      const isDuplicate =
+        mostRecentEntry &&
+        mostRecentEntry.status === updateData.statusHistoryEntry.status;
+
+      if (!isDuplicate) {
+        updateOperation.$push = {
+          statusHistory: {
+            $each: [updateData.statusHistoryEntry],
+            $position: 0, // Add to beginning of array for newest-first order
+          },
+        };
+      }
     }
 
     // Update order using the resolved id

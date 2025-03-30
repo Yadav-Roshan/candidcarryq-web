@@ -65,3 +65,20 @@ export function calculateDiscountPercentage(
   if (!originalPrice || !salePrice || originalPrice <= salePrice) return 0;
   return Math.round(((originalPrice - salePrice) / originalPrice) * 100);
 }
+
+// Calculate promo code discount based on percentage and subtotal
+export function calculatePromoDiscount(
+  subtotal: number,
+  discountPercentage: number,
+  maxDiscount: number | null = null
+): number {
+  let discountAmount = (subtotal * discountPercentage) / 100;
+
+  // Apply maximum discount cap if set
+  if (maxDiscount !== null) {
+    discountAmount = Math.min(discountAmount, maxDiscount);
+  }
+
+  // Round to 2 decimal places
+  return Math.round(discountAmount * 100) / 100;
+}

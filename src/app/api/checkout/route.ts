@@ -20,15 +20,15 @@ const orderItemSchema = z.object({
 
 // Updated shipping address schema to match the form data
 const shippingAddressSchema = z.object({
+  phoneNumber: z.string().min(10, "Phone number is required"),
   buildingName: z.string().optional(),
-  locality: z.string().min(1, "Locality is required"),
+  locality: z.string().min(1, "Locality/Area is required"),
   wardNo: z.string().optional(),
   postalCode: z.string().min(1, "Postal code is required"),
   district: z.string().min(1, "District is required"),
   province: z.string().min(1, "Province is required"),
   country: z.string().min(1, "Country is required"),
   landmark: z.string().optional(),
-  phoneNumber: z.string().optional(),
 });
 
 // Updated order schema with more flexible validation
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     // Ensure we include all necessary fields in the projection, especially delivererName and delivererPhone
     const orders = await Order.find({ user: userId })
       .select(
-        "orderNumber createdAt totalAmount items orderStatus paymentStatus shippingAddress paymentMethod transactionRef shippingCost taxAmount discount promoCode statusHistory trackingNumber deliveryOtp delivererName delivererPhone promoCodeDiscount"
+        "orderNumber createdAt totalAmount items orderStatus paymentStatus shippingAddress paymentMethod transactionRef shippingCost taxAmount discount promoCode statusHistory trackingNumber deliveryOtp delivererName delivererPhone"
       )
       .sort({ createdAt: -1 });
 
@@ -90,7 +90,6 @@ export async function GET(request: NextRequest) {
       taxAmount: order.taxAmount,
       discount: order.discount,
       promoCode: order.promoCode,
-      promoCodeDiscount: order.promoCodeDiscount, // Include promoCodeDiscount in response
       statusHistory: order.statusHistory,
       trackingNumber: order.trackingNumber,
       deliveryOtp: order.deliveryOtp,
@@ -177,7 +176,7 @@ export async function POST(request: NextRequest) {
     const validatedData = validationResult.data;
 
     // Convert the shipping address format to match our order model
-    // Use new address format directly instead of converting from old format
+    // Map new address format to the format expected by the Order model
     const addressData = {
       phoneNumber: validatedData.shippingAddress.phoneNumber,
       buildingName: validatedData.shippingAddress.buildingName,
@@ -208,7 +207,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create order with the updated address format
+    // Create order with the adapted address format - ensuring orderStatus and paymentStatus match the schema
     const order = await Order.create({
       user: user.id,
       orderNumber: await generateOrderNumber(),
@@ -224,7 +223,7 @@ export async function POST(request: NextRequest) {
       taxAmount: validatedData.taxAmount,
       discount: discountAmount,
       promoCode: promoCodeUsed,
-      promoCodeDiscount: discountAmount, // Ensure promoCodeDiscount is set correctly
+      promoCodeDiscount: discountAmount, // Make sure promoCodeDiscount is set
       statusHistory: [
         {
           status: "pending",
