@@ -66,12 +66,13 @@ export async function GET(request: NextRequest) {
     // Get orders for this user
     const orders = await Order.find({ user: user.id })
       .sort({ createdAt: -1 })
-      .select(
-        "orderNumber items totalAmount paymentStatus orderStatus createdAt trackingNumber"
-      )
+      // Remove the select or expand it to include all needed fields
+      // .select(
+      //   "orderNumber items totalAmount paymentStatus orderStatus createdAt trackingNumber"
+      // )
       .lean();
 
-    // Format the response
+    // Format the response with additional fields
     const formattedOrders = orders.map((order: any) => ({
       id: order._id.toString(),
       orderNumber: order.orderNumber,
@@ -80,6 +81,16 @@ export async function GET(request: NextRequest) {
       status: order.orderStatus,
       paymentStatus: order.paymentStatus,
       trackingNumber: order.trackingNumber || null,
+      // Include additional fields needed for order details
+      shippingAddress: order.shippingAddress,
+      paymentMethod: order.paymentMethod,
+      transactionRef: order.transactionRef,
+      shippingCost: order.shippingCost || 0,
+      taxAmount: order.taxAmount || 0,
+      discount: order.discount || 0,
+      promoCode: order.promoCode || null,
+      statusHistory: order.statusHistory || [],
+      // Map items as before
       items: order.items.map((item: any) => ({
         id: item.product.toString(),
         name: item.name,

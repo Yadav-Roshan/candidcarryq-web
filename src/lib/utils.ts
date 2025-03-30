@@ -25,12 +25,25 @@ export function formatPrice(amount: number, currency = "NPR"): string {
   }).format(amount);
 }
 
-export function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+export function formatDate(date: Date | string | number): string {
+  try {
+    // Convert to Date object if string or number is provided
+    const dateObj = date instanceof Date ? date : new Date(date);
+
+    // Check if date is valid
+    if (isNaN(dateObj.getTime())) {
+      return "Invalid date";
+    }
+
+    return dateObj.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch (error) {
+    console.error("Date formatting error:", error);
+    return "Invalid date";
+  }
 }
 
 export function mergeClassList(...classes: string[]): string {
