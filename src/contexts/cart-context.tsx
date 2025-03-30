@@ -354,7 +354,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     // Sync to server if logged in
     if (user && isInitialized) {
-      clearCartOnServer();
+      try {
+        await clearCartOnServer();
+      } catch (error) {
+        console.error("Failed to clear cart on server:", error);
+        // Don't throw - we want this function to resolve even if server call fails
+        // The server will clear the cart during order creation as a fallback
+      }
     }
   };
 
@@ -450,14 +456,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!token) return;
 
     try {
-      await fetch(`/api/user/cart?clearAll=true`, {
+      const response = await fetch(`/api/user/cart?clearAll=true`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to clear cart on server: ${response.status}`);
+      }
+
+      return true;
     } catch (error) {
       console.error("Error clearing server cart:", error);
+      throw error; // Re-throw to handle in the calling function
     }
   };
 

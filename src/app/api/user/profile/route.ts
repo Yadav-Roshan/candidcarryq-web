@@ -6,34 +6,34 @@ import { z } from "zod";
 
 // GET - Get user profile
 export async function GET(request: NextRequest) {
-  // Authenticate request
-  const user = await authenticate(request);
+  // Authenticate request with updated format check
+  const authResult = await authenticate(request);
 
-  if (!user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  if (authResult.status !== 200) {
+    return NextResponse.json(
+      { message: authResult.message || "Unauthorized" },
+      { status: authResult.status }
+    );
   }
 
   return NextResponse.json({
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      phoneNumber: user.phoneNumber,
-      role: user.role,
-      avatar: user.avatar,
-      address: user.address,
-    },
+    user: authResult.user,
   });
 }
 
 // PUT - Update user profile
 export async function PUT(request: NextRequest) {
-  // Authenticate request
-  const user = await authenticate(request);
+  // Authenticate request with updated format check
+  const authResult = await authenticate(request);
 
-  if (!user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  if (authResult.status !== 200) {
+    return NextResponse.json(
+      { message: authResult.message || "Unauthorized" },
+      { status: authResult.status }
+    );
   }
+
+  const user = authResult.user;
 
   try {
     const body = await request.json();

@@ -96,8 +96,15 @@ export default function CheckoutPage() {
           description: "Your payment is being verified. We'll update you soon!",
         });
 
-        // Clear the cart after successful order
-        clearCart();
+        try {
+          // Make sure to await cart clearing before redirecting
+          await clearCart();
+          console.log("Cart cleared successfully");
+        } catch (cartError) {
+          console.error("Error clearing cart on client:", cartError);
+          // Continue with redirect even if client-side clearing fails
+          // Server-side cart should still be cleared by our API update
+        }
 
         // Redirect to order success page with order ID if available
         router.push(
