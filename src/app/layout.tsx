@@ -1,18 +1,21 @@
-import './globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import { ThemeProvider } from '@/components/theme-provider'
-import { CartProvider } from '@/contexts/cart-context'
-import { AuthProvider } from '@/contexts/auth-context'
+import './globals.css'
+import { ThemeProvider } from '@/providers/theme-provider'
+import Header from '@/components/header' // Keep using the header from components directory
+import Footer from '@/components/footer' // Keep using the footer from components directory
 import { Toaster } from '@/components/ui/toaster'
-import Header from '@/components/layout/header'
-import Footer from '@/components/layout/footer'
+import { AuthProvider } from '@/contexts/auth-context'
+import { CartProvider } from '@/contexts/cart-context'
+import { WishlistProvider } from '@/contexts/wishlist-context'
+import { AnnouncementProvider } from '@/contexts/announcement-context'
+import { AnnouncementBanner } from '@/components/announcement-banner'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'CandidWear - Premium Bags & Accessories',
-  description: 'Shop the latest collection of premium bags and accessories',
+  description: 'Discover premium quality bags and accessories at CandidWear.',
 }
 
 export default function RootLayout({
@@ -22,19 +25,29 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <AuthProvider>
-          <CartProvider>
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-              <div className="relative flex min-h-screen flex-col">
-                <Header />
-                <main className="flex-1">{children}</main>
-                <Footer />
-              </div>
-              <Toaster />
-            </ThemeProvider>
-          </CartProvider>
-        </AuthProvider>
+      <body className={inter.className} suppressHydrationWarning>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <AnnouncementProvider>
+                  <div className="flex min-h-screen flex-col">
+                    <AnnouncementBanner />
+                    <Header />
+                    <main className="flex-1">{children}</main>
+                    <Footer />
+                  </div>
+                  <Toaster />
+                </AnnouncementProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

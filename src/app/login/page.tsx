@@ -2,13 +2,13 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
+import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
+import { Eye, EyeOff, Loader2 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Form,
   FormControl,
@@ -18,138 +18,183 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { useToast } from "@/components/ui/use-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { PhoneInput } from "@/components/ui/phone-input"
+import { findDefaultCountry } from "@/lib/country-codes"
 
-const formSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
-  rememberMe: z.boolean().optional(),
-})
+// Form schema
+const loginSchema = z.object({
+  identifier: z.string().min(1, "Email or phone number is required"),
+  password: z.string().min(1, "Password is required"),
+  isUsingPhone: z.boolean().default(false),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { login } = useAuth()
-  const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+  const [isUsingPhone, setIsUsingPhone] = useState(false)
   const router = useRouter()
-  const { toast } = useToast()
+  const searchParams = useSearchParams()
+  const returnTo = searchParams.get("from") || "/account"
+  const { login } = useAuth()
   
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  // Initialize form
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      identifier: isUsingPhone ? findDefaultCountry().dial_code : "",
       password: "",
-      rememberMe: true,
+      isUsingPhone: false,
     },
   })
-
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true)
+  
+  // Toggle between email and phone inputs
+  const toggleIdentifierType = () => {
+    setIsUsingPhone(!isUsingPhone)
+    form.setValue('identifier', isUsingPhone ? "" : findDefaultCountry().dial_code)
+    form.setValue('isUsingPhone', !isUsingPhone)
+  }
+  
+  const onSubmit = async (data: LoginFormValues) => {
+    setIsLoggingIn(true)
+    setErrorMessage(null)
     
     try {
-      await login(values.email, values.password)
-      toast({
-        title: "Login successful",
-        description: "Welcome back to CandidWear!",
-      })
-      router.push("/")
-    } catch (err) {
-      toast({
-        title: "Login failed",
-        description: "Please check your credentials and try again.",
-        variant: "destructive",
-      })
+      const success = await login(data.identifier, data.password)
+      
+      if (success) {
+        router.push(returnTo)
+      } else {
+        setErrorMessage("Login failed. Please check your credentials.")
+      }
+    } catch (error: any) {
+      setErrorMessage(error.message || "An error occurred during login")
     } finally {
-      setIsLoading(false)
+      setIsLoggingIn(false)
     }
   }
-
+  
   return (
-    <div className="container mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-4 py-8">
-      <div className="w-full space-y-6 rounded-lg border bg-card p-6 shadow-md">
-        <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold">Welcome Back</h1>
-          <p className="text-muted-foreground">Sign in to your CandidWear account</p>
+    <div className="container flex flex-col items-center py-16">
+      <div className="w-full max-w-md space-y-8">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
+          <p className="text-muted-foreground">
+            Sign in to your account to continue
+          </p>
         </div>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="email@example.com" type="email" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center justify-between">
+        
+        {errorMessage && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
+        
+        <div className="bg-card border rounded-lg p-8 shadow-sm">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="identifier"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>{isUsingPhone ? "Phone Number" : "Email"}</FormLabel>
+                      <Button 
+                        type="button" 
+                        variant="link" 
+                        size="sm" 
+                        className="text-xs h-auto p-0"
+                        onClick={toggleIdentifierType}
+                      >
+                        Use {isUsingPhone ? "Email" : "Phone Number"} instead
+                      </Button>
+                    </div>
+                    <FormControl>
+                      {isUsingPhone ? (
+                        <PhoneInput
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Enter your phone number"
+                        />
+                      ) : (
+                        <Input 
+                          placeholder="Enter your email" 
+                          {...field} 
+                        />
+                      )}
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
                     <FormLabel>Password</FormLabel>
-                    <Link href="/forgot-password" className="text-xs text-primary hover:underline">
-                      Forgot password?
-                    </Link>
-                  </div>
-                  <FormControl>
-                    <Input type="password" placeholder="********" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="rememberMe"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                  <FormControl>
-                    <Checkbox 
-                      checked={field.value} 
-                      onCheckedChange={field.onChange} 
-                    />
-                  </FormControl>
-                  <div className="leading-none">
-                    <FormLabel>Remember me</FormLabel>
-                  </div>
-                </FormItem>
-              )}
-            />
-            
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In"}
-            </Button>
-          </form>
-        </Form>
-
-        <div className="relative flex items-center justify-center">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <span className="relative bg-background px-2 text-xs text-muted-foreground">
-            OR CONTINUE WITH
-          </span>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Enter your password"
+                          {...field}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full px-3"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          <span className="sr-only">
+                            {showPassword ? "Hide password" : "Show password"}
+                          </span>
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="text-right">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-muted-foreground hover:text-primary"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              
+              <Button type="submit" className="w-full" disabled={isLoggingIn}>
+                {isLoggingIn && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Sign In
+              </Button>
+            </form>
+          </Form>
+          
+          
         </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Button variant="outline" type="button" disabled={isLoading}>
-            Google
-          </Button>
-          <Button variant="outline" type="button" disabled={isLoading}>
-            Facebook
-          </Button>
-        </div>
-
-        <p className="text-center text-sm text-muted-foreground">
+        
+        <p className="text-center mt-8 text-sm text-muted-foreground">
           Don't have an account?{" "}
-          <Link href="/signup" className="font-medium text-primary hover:underline">
+          <Link
+            href="/register"
+            className="font-medium text-primary hover:text-primary/80"
+          >
             Sign up
           </Link>
         </p>
