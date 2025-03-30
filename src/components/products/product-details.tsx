@@ -98,8 +98,8 @@ export function ProductDetails({ product }: ProductDetailsProps) {
         price: product.salePrice || product.price,
         image: product.image,
         // Remove quantity from here - it's passed as second argument
-        color: selectedColor,
-        size: selectedSize,
+        colors: [selectedColor],
+        sizes: [selectedSize],
       },
       quantity // Pass quantity as separate parameter
     );

@@ -1,109 +1,109 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticate } from "@/middleware/auth.middleware";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/user.model";
+import { authenticate } from "@/middleware/auth.middleware";
 import { z } from "zod";
 
-// GET - Get user profile
-export async function GET(request: NextRequest) {
-  // Authenticate request with updated format check
-  const authResult = await authenticate(request);
+// Define validation schema for profile updates
+const updateProfileSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").optional(),
+  email: z.string().email("Invalid email address").optional(),
+  phoneNumber: z.string().optional(),
+  avatar: z.string().url("Avatar must be a valid URL").optional(),
+});
 
-  if (authResult.status !== 200) {
+// GET: Get user profile
+export async function GET(request: NextRequest) {
+  try {
+    await connectToDatabase();
+
+    // Authentication middleware - update to handle new return structure
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200 || !authResult.user) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status || 401 }
+      );
+    }
+
+    const user = authResult.user;
+
+    // Return user profile data
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        avatar: user.avatar,
+        address: user.address,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching profile:", error);
     return NextResponse.json(
-      { message: authResult.message || "Unauthorized" },
-      { status: authResult.status }
+      { message: "Internal server error" },
+      { status: 500 }
     );
   }
-
-  return NextResponse.json({
-    user: authResult.user,
-  });
 }
 
-// PUT - Update user profile
+// PUT: Update user profile
 export async function PUT(request: NextRequest) {
-  // Authenticate request with updated format check
-  const authResult = await authenticate(request);
-
-  if (authResult.status !== 200) {
-    return NextResponse.json(
-      { message: authResult.message || "Unauthorized" },
-      { status: authResult.status }
-    );
-  }
-
-  const user = authResult.user;
-
   try {
-    const body = await request.json();
+    await connectToDatabase();
 
-    // Validate update data with improved phone validation
-    const updateSchema = z.object({
-      name: z.string().min(2).optional(),
-      email: z.string().email().optional(),
-      phoneNumber: z
-        .string()
-        .regex(
-          /^\+?[0-9]{10,15}$/,
-          "Phone number must be a valid international format"
-        )
-        .optional()
-        .nullable(),
-      avatar: z.string().optional().nullable(),
-    });
-
-    const result = updateSchema.safeParse(body);
-    if (!result.success) {
+    // Authentication middleware - update to handle new return structure
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200 || !authResult.user) {
       return NextResponse.json(
-        { message: "Validation failed", errors: result.error.format() },
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status || 401 }
+      );
+    }
+
+    const user = authResult.user;
+
+    // Parse and validate request body
+    const body = await request.json();
+    const validationResult = updateProfileSchema.safeParse(body);
+
+    if (!validationResult.success) {
+      return NextResponse.json(
+        {
+          message: "Validation failed",
+          errors: validationResult.error.format(),
+        },
         { status: 400 }
       );
     }
 
-    await connectToDatabase();
+    const validatedData = validationResult.data;
 
     // If email is being updated, check if it's already in use
-    if (body.email && body.email !== user.email) {
-      const existingUser = await User.findOne({ email: body.email });
+    if (validatedData.email && validatedData.email !== user.email) {
+      const existingUser = await User.findOne({ email: validatedData.email });
       if (existingUser) {
         return NextResponse.json(
-          { message: "Email already in use" },
-          { status: 409 }
+          { message: "Email is already in use" },
+          { status: 400 }
         );
       }
-    }
-
-    // If phone is being updated, ensure proper format and check if it's already in use
-    if (body.phoneNumber && body.phoneNumber !== user.phoneNumber) {
-      // Ensure phone number starts with a plus sign for international format
-      if (!body.phoneNumber.startsWith("+")) {
-        body.phoneNumber = `+${body.phoneNumber}`;
-      }
-
-      const existingUser = await User.findOne({
-        phoneNumber: body.phoneNumber,
-      });
-      if (existingUser && existingUser._id.toString() !== user.id) {
-        return NextResponse.json(
-          { message: "Phone number already in use" },
-          { status: 409 }
-        );
-      }
-    }
-
-    // Handle null phoneNumber properly (allow removal)
-    if (body.phoneNumber === null) {
-      body.phoneNumber = undefined; // MongoDB will unset the field
     }
 
     // Update user in database
     const updatedUser = await User.findByIdAndUpdate(
       user.id,
-      { $set: body },
+      { $set: validatedData },
       { new: true, runValidators: true }
     ).select("-password");
 
+    if (!updatedUser) {
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
+    }
+
+    // Return updated user data
     return NextResponse.json({
       message: "Profile updated successfully",
       user: {
@@ -111,13 +111,13 @@ export async function PUT(request: NextRequest) {
         name: updatedUser.name,
         email: updatedUser.email,
         phoneNumber: updatedUser.phoneNumber,
-        role: updatedUser.role,
         avatar: updatedUser.avatar,
         address: updatedUser.address,
+        role: updatedUser.role,
       },
     });
   } catch (error) {
-    console.error("Profile update error:", error);
+    console.error("Error updating profile:", error);
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 }

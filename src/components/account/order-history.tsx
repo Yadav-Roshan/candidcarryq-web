@@ -307,7 +307,9 @@ export function OrderHistory() {
   const filteredOrders = orders.filter((order) => {
     // Get the most current status from status history
     const currentOrderStatus =
-      order.statusHistory?.length > 0
+      order.statusHistory &&
+      Array.isArray(order.statusHistory) &&
+      order.statusHistory.length > 0
         ? getMostRecentStatus(order.statusHistory, "order")?.status ||
           order.status
         : order.status;
@@ -432,7 +434,9 @@ export function OrderHistory() {
             filteredOrders.map((order) => {
               // Get the most current order status from status history
               const currentOrderStatus =
-                order.statusHistory?.length > 0
+                order.statusHistory &&
+                Array.isArray(order.statusHistory) &&
+                order.statusHistory.length > 0
                   ? getMostRecentStatus(order.statusHistory, "order")?.status ||
                     order.status
                   : order.status;

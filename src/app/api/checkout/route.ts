@@ -45,15 +45,26 @@ const createOrderSchema = z.object({
   promoCode: z.string().optional().nullable(), // Added for promocode
 });
 
+// Define an interface for the database order item structure
+interface DbOrderItem {
+  product: any; // MongoDB ObjectId or string
+  name: string;
+  price: number;
+  quantity: number;
+  image: string;
+  color?: string;
+  size?: string;
+}
+
 // GET - Get user's orders
 export async function GET(request: NextRequest) {
   try {
     // Authentication middleware
     const authResult = await authenticate(request);
-    if (authResult.status !== 200) {
+    if (authResult.status !== 200 || !authResult.user) {
       return NextResponse.json(
         { message: authResult.message || "Unauthorized" },
-        { status: authResult.status }
+        { status: authResult.status || 401 }
       );
     }
 
@@ -75,7 +86,7 @@ export async function GET(request: NextRequest) {
       date: order.createdAt,
       status: order.orderStatus,
       total: order.totalAmount,
-      items: order.items.map((item) => ({
+      items: order.items.map((item: DbOrderItem) => ({
         id: item.product.toString(),
         name: item.name,
         price: item.price,

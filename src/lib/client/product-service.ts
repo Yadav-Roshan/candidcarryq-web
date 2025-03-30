@@ -11,15 +11,16 @@ export interface Product {
   salePrice?: number | null;
   rating?: number;
   reviewCount?: number;
-  stock?: number;
-  featured?: boolean;
-  isFeatured?: boolean;
   images?: string[];
   colors?: string[];
+  sizes?: string[];
   material?: string;
   dimensions?: string;
   weight?: string;
   capacity?: string;
+  fullDescription?: string;
+  featured?: boolean;
+  stock?: number;
 }
 
 // Client-safe fetch function

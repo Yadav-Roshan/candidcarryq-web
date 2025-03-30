@@ -216,11 +216,11 @@ export default function ProductsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {product.isFeatured ? (
+                      {product.featured ? (
                         <Badge className="bg-primary">Yes</Badge>
                       ) : (
                         <span className="text-muted-foreground">
-                          No (value: {String(product.isFeatured)})
+                          No (value: {String(product.featured)})
                         </span>
                       )}
                     </TableCell>

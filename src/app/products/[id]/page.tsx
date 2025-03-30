@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/breadcrumb";
 
 interface ProductPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata({

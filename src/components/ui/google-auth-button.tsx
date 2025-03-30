@@ -92,7 +92,7 @@ export function GoogleAuthButton() {
 
       // Small delay to let Google's internal state update
       setTimeout(() => {
-        window.google.accounts.id.initialize({
+        window.google?.accounts.id.initialize({
           client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
           callback: handleCredentialResponse,
           auto_select: false,
@@ -101,7 +101,7 @@ export function GoogleAuthButton() {
 
         // Render the button manually to the ref
         if (buttonRef.current) {
-          window.google.accounts.id.renderButton(buttonRef.current, {
+          window.google?.accounts.id.renderButton(buttonRef.current, {
             type: "standard",
             theme: "outline",
             size: "large",

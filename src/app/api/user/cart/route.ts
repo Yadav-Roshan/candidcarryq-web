@@ -4,35 +4,55 @@ import User from "@/models/user.model";
 import Product from "@/models/product.model";
 import { authenticate } from "@/middleware/auth.middleware";
 
+// Define interfaces for better type safety with more flexible typing
+interface CartItem {
+  productId: string;
+  quantity: number;
+  color?: string;
+  size?: string;
+}
+
+// Make the cart property optional since we're using select
+interface UserData {
+  _id: any;
+  cart?: CartItem[];
+}
+
 // GET - Get user's cart
 export async function GET(request: NextRequest) {
   try {
     // Authentication middleware - update to use new response format
     const authResult = await authenticate(request);
-    if (authResult.status !== 200) {
+    if (authResult.status !== 200 || !authResult.user) {
       return NextResponse.json(
         { message: authResult.message || "Unauthorized" },
-        { status: authResult.status }
+        { status: authResult.status || 401 }
       );
     }
     const user = authResult.user;
 
     await connectToDatabase();
 
-    // Get user with populated cart
+    // Get user with populated cart - fix type casting
     const userData = await User.findById(user.id).select("cart").lean();
 
     if (!userData) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
+    // Safely access cart property with proper typing
+    const userCart =
+      userData && "cart" in userData
+        ? (userData.cart as CartItem[] | undefined)
+        : undefined;
+
     // If user has no cart items, return empty array
-    if (!userData.cart || userData.cart.length === 0) {
+    if (!userCart || !Array.isArray(userCart) || userCart.length === 0) {
       return NextResponse.json({ cart: [] });
     }
 
     // Get product details for all cart items
-    const productIds = userData.cart.map((item: any) => item.productId);
+    const productIds = userCart.map((item) => item.productId);
     const products = await Product.find({ _id: { $in: productIds } }).lean();
 
     // Create a map of product ID to product details
@@ -42,8 +62,8 @@ export async function GET(request: NextRequest) {
     });
 
     // Map cart items with product details
-    const cart = userData.cart
-      .map((item: any) => {
+    const cart = userCart
+      .map((item: CartItem) => {
         const product = productMap.get(item.productId.toString());
         if (!product) return null; // Skip if product not found
 
@@ -73,10 +93,10 @@ export async function POST(request: NextRequest) {
   try {
     // Authentication middleware - update to use new response format
     const authResult = await authenticate(request);
-    if (authResult.status !== 200) {
+    if (authResult.status !== 200 || !authResult.user) {
       return NextResponse.json(
         { message: authResult.message || "Unauthorized" },
-        { status: authResult.status }
+        { status: authResult.status || 401 }
       );
     }
     const user = authResult.user;
@@ -245,10 +265,10 @@ export async function DELETE(request: NextRequest) {
   try {
     // Authentication middleware - update to use new response format
     const authResult = await authenticate(request);
-    if (authResult.status !== 200) {
+    if (authResult.status !== 200 || !authResult.user) {
       return NextResponse.json(
         { message: authResult.message || "Unauthorized" },
-        { status: authResult.status }
+        { status: authResult.status || 401 }
       );
     }
     const user = authResult.user;

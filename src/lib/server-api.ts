@@ -4,6 +4,29 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/product.model";
 import mongoose from "mongoose";
 
+// Define interface for ProductDocument
+interface ProductDocument {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  description: string;
+  price: number;
+  salePrice?: number;
+  category: string;
+  image: string;
+  images?: string[];
+  colors?: string[];
+  material?: string;
+  rating?: number;
+  reviewCount?: number;
+  stock: number;
+  featured?: boolean;
+  fullDescription?: string;
+  dimensions?: string;
+  weight?: string;
+  capacity?: string;
+  sizes?: string[];
+}
+
 // Helper to check if ID is a valid MongoDB ObjectId
 function isValidObjectId(id: string): boolean {
   return mongoose.Types.ObjectId.isValid(id);
@@ -45,12 +68,14 @@ export const getAllProducts = cache(async (paramsInput: any = {}) => {
 
     // Colors filter
     if (colors && colors.length > 0) {
-      query.colors = { $in: colors.map((c) => new RegExp(c, "i")) };
+      query.colors = { $in: colors.map((c: string) => new RegExp(c, "i")) };
     }
 
     // Materials filter
     if (materials && materials.length > 0) {
-      query.material = { $in: materials.map((m) => new RegExp(m, "i")) };
+      query.material = {
+        $in: materials.map((m: string) => new RegExp(m, "i")),
+      };
     }
 
     console.log("Product query:", JSON.stringify(query));
@@ -78,10 +103,10 @@ export const getAllProducts = cache(async (paramsInput: any = {}) => {
     const skip = (page - 1) * limit;
 
     console.log("Executing product query with pagination:", { skip, limit });
-    const products = await Product.find(query)
+    const products = (await Product.find(query)
       .sort(sortOption)
       .skip(skip)
-      .limit(limit);
+      .limit(limit)) as ProductDocument[];
 
     console.log(`Found ${products.length} products in database`);
 
@@ -121,7 +146,7 @@ export const getProductById = cache(async (id: string) => {
       return null; // Return null instead of checking mock data
     }
 
-    const product = await Product.findById(id);
+    const product = (await Product.findById(id)) as ProductDocument | null;
 
     if (!product) {
       console.log(`Product ${id} not found`);
@@ -158,7 +183,9 @@ export const getFeaturedProducts = cache(async () => {
   try {
     await connectToDatabase();
 
-    const featuredProducts = await Product.find({ featured: true }).limit(8);
+    const featuredProducts = (await Product.find({ featured: true }).limit(
+      8
+    )) as ProductDocument[];
 
     if (featuredProducts.length === 0) {
       // Return empty array if no featured products in DB

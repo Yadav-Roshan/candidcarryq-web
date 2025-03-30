@@ -64,14 +64,12 @@ interface Order {
   items: OrderItem[];
   totalAmount: number;
   shippingAddress: {
-    phoneNumber: string;
-    buildingName?: string;
-    locality: string;
-    wardNo?: string;
+    street: string;
+    city: string;
+    state: string;
     postalCode: string;
-    district: string;
-    province: string;
     country: string;
+    wardNo?: string;
     landmark?: string;
   };
   paymentMethod: string;
@@ -83,7 +81,6 @@ interface Order {
   taxAmount: number;
   discount?: number;
   promoCode?: string;
-  promoCodeDiscount?: number; // Add promoCodeDiscount field
   trackingNumber?: string;
   createdAt: string;
   updatedAt: string;
@@ -100,7 +97,7 @@ export default function OrderDetailsPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [viewPaymentDetails, setViewPaymentDetails] = useState(false);
-  const orderId = params.id as string;
+  const orderId = (params?.id as string) || "";
 
   // State to track status notification indicators
   const [orderStatusNotifications, setOrderStatusNotifications] = useState<{
@@ -247,7 +244,9 @@ export default function OrderDetailsPage() {
 
   // Get the most current status from status history if available
   const currentOrderStatus =
-    order?.statusHistory?.length > 0
+    order?.statusHistory &&
+    Array.isArray(order.statusHistory) &&
+    order.statusHistory.length > 0
       ? getMostRecentStatus(order.statusHistory, "order")?.status ||
         order.orderStatus
       : order?.orderStatus;
@@ -785,9 +784,8 @@ export default function OrderDetailsPage() {
                       )}
                     </span>
                   </div>
-                  {/* Show discount info with promo code details if applicable */}
-                  {order.discount > 0 && (
-                    <div className="flex justify-between text-green-600 mb-2">
+                  {order.discount && order.discount > 0 && (
+                    <div className="flex justify-between text-green-600">
                       <span>
                         Discount {order.promoCode && `(${order.promoCode})`}
                       </span>
@@ -1010,17 +1008,12 @@ export default function OrderDetailsPage() {
               <div>
                 <h3 className="text-sm font-medium mb-2">Shipping Address</h3>
                 <div className="text-sm">
-                  <p>{order.shippingAddress.phoneNumber}</p>
-                  {order.shippingAddress.buildingName && (
-                    <p>{order.shippingAddress.buildingName}</p>
-                  )}
-                  <p>{order.shippingAddress.locality}</p>
+                  <p>{order.shippingAddress.street}</p>
                   {order.shippingAddress.wardNo && (
                     <p>Ward {order.shippingAddress.wardNo}</p>
                   )}
                   <p>
-                    {order.shippingAddress.district},{" "}
-                    {order.shippingAddress.province}{" "}
+                    {order.shippingAddress.city}, {order.shippingAddress.state}{" "}
                     {order.shippingAddress.postalCode}
                   </p>
                   <p>{order.shippingAddress.country}</p>

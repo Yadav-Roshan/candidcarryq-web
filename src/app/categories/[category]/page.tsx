@@ -17,9 +17,9 @@ const validCategories = [
 export async function generateMetadata({
   params,
 }: {
-  params: { category: string };
+  params: Promise<{ category: string }>;
 }): Promise<Metadata> {
-  const { category } = params;
+  const { category } = await params;
   const title = category.charAt(0).toUpperCase() + category.slice(1);
 
   return {
@@ -34,12 +34,9 @@ export async function generateStaticParams() {
   }));
 }
 
-export default async function CategoryPage({
-  params,
-  searchParams,
-}: {
-  params: { category: string };
-  searchParams?: {
+interface PageProps {
+  params: Promise<{ category: string }>;
+  searchParams?: Promise<{
     page?: string;
     limit?: string;
     sort?: string;
@@ -47,9 +44,14 @@ export default async function CategoryPage({
     maxPrice?: string;
     colors?: string;
     materials?: string;
-  };
-}) {
-  const { category } = params;
+  }>;
+}
+
+export default async function CategoryPage({
+  params,
+  searchParams,
+}: PageProps) {
+  const { category } = await params;
 
   // Validate category
   if (!validCategories.includes(category)) {

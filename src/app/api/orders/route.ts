@@ -31,18 +31,23 @@ export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
 
-    // Authentication middleware
+    const { searchParams } = new URL(request.url);
     const authResult = await authenticate(request);
-    if (authResult.status !== 200) {
-      return authResult;
+
+    if (authResult.status !== 200 || !authResult.user) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status || 401 }
+      );
     }
 
     const user = authResult.user;
 
+    // Make sure user exists and has a role property
     let query = {};
     // Regular users can only see their own orders
-    if (user.role !== "admin") {
-      query = { user: user._id };
+    if (user && user.role !== "admin") {
+      query = { user: user.id }; // Changed from user._id to user.id
     }
 
     const orders = await Order.find(query).sort({ createdAt: -1 });
@@ -58,10 +63,13 @@ export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
 
-    // Authentication middleware
+    // Authentication middleware - Fix to ensure NextResponse
     const authResult = await authenticate(request);
-    if (!authResult || authResult.status !== 200) {
-      return authResult;
+    if (authResult.status !== 200 || !authResult.user) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status || 401 }
+      );
     }
 
     const user = authResult.user;
@@ -111,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     // Create order
     const order = await Order.create({
-      user: user._id,
+      user: user.id, // Changed from user._id to user.id
       ...orderData,
     });
 

@@ -7,6 +7,15 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { getAllProducts } from "@/lib/server-api";
 import { NoProducts } from "@/components/products/no-products";
+// Import the Product type from the product service
+import { Product as ProductType } from "@/lib/client/product-service";
+
+// We'll use the imported Product type instead of defining our own
+interface CategoryWithProducts {
+  normalized: string;
+  display: string;
+  products: ProductType[];
+}
 
 export const metadata: Metadata = {
   title: "Product Categories - CandidCarryq",
@@ -18,7 +27,7 @@ export default async function CategoriesPage() {
   const allProducts = await getAllProducts();
 
   // Extract unique categories and normalize them
-  const categoriesMap = new Map();
+  const categoriesMap = new Map<string, CategoryWithProducts>();
 
   allProducts.forEach((product) => {
     if (product.category) {
@@ -37,8 +46,16 @@ export default async function CategoriesPage() {
         });
       }
 
+      // Make sure product.image is not undefined (as required by ProductType)
+      const productWithRequiredImage = {
+        ...product,
+        image: product.image || "", // Ensure image is never undefined
+      };
+
       // Add product to this category
-      categoriesMap.get(normalizedCategory).products.push(product);
+      categoriesMap
+        .get(normalizedCategory)!
+        .products.push(productWithRequiredImage as ProductType);
     }
   });
 

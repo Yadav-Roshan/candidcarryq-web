@@ -9,22 +9,16 @@ export const metadata: Metadata = {
   description: "Browse our collection of premium bags and accessories.",
 };
 
-export default async function ProductsPage({
-  searchParams,
-}: {
-  searchParams?: {
-    page?: string;
-    limit?: string;
-    category?: string;
-    sort?: string;
-    minPrice?: string;
-    maxPrice?: string;
-    colors?: string;
-    materials?: string;
-  };
-}) {
-  // Server-side fetch products with properly awaited searchParams
-  const products = await getAllProducts(searchParams || {});
+// Don't use explicit parameter typing - let Next.js infer the types
+export default async function ProductsPage(props: any) {
+  // Handle the searchParams regardless of whether it's a Promise or object
+  const searchParams =
+    props.searchParams instanceof Promise
+      ? await props.searchParams
+      : props.searchParams || {};
+
+  // Server-side fetch products with the properly handled search parameters
+  const products = await getAllProducts(searchParams);
 
   return (
     <div className="container py-8">

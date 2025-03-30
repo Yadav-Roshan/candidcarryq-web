@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { authenticate } from '@/middleware/auth.middleware';
-import { connectToDatabase } from '@/lib/mongodb';
-import User from '@/models/user.model';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from "next/server";
+import { authenticate } from "@/middleware/auth.middleware";
+import { connectToDatabase } from "@/lib/mongodb";
+import User from "@/models/user.model";
+import { z } from "zod";
 
 // Address validation schema
 const addressSchema = z.object({
@@ -19,62 +19,59 @@ const addressSchema = z.object({
 // GET - Get user address
 export async function GET(request: NextRequest) {
   // Authenticate request
-  const user = await authenticate(request);
-  
-  if (!user) {
+  const authResult = await authenticate(request);
+
+  if (authResult.status !== 200 || !authResult.user) {
     return NextResponse.json(
-      { message: 'Unauthorized' },
-      { status: 401 }
+      { message: authResult.message || "Unauthorized" },
+      { status: authResult.status || 401 }
     );
   }
-  
+
   return NextResponse.json({
-    address: user.address || null
+    address: authResult.user.address || null,
   });
 }
 
 // PUT - Update user address
 export async function PUT(request: NextRequest) {
   // Authenticate request
-  const user = await authenticate(request);
-  
-  if (!user) {
+  const authResult = await authenticate(request);
+
+  if (authResult.status !== 200 || !authResult.user) {
     return NextResponse.json(
-      { message: 'Unauthorized' },
-      { status: 401 }
+      { message: authResult.message || "Unauthorized" },
+      { status: authResult.status || 401 }
     );
   }
-  
+
   try {
     const body = await request.json();
-    
+
     // Validate address data
     const result = addressSchema.safeParse(body.address);
     if (!result.success) {
       return NextResponse.json(
-        { message: 'Validation failed', errors: result.error.format() },
+        { message: "Validation failed", errors: result.error.format() },
         { status: 400 }
       );
     }
-    
+
     await connectToDatabase();
-    
+
     // Update user's address in database
     const updatedUser = await User.findByIdAndUpdate(
-      user.id,
+      authResult.user.id,
       { $set: { address: body.address } },
       { new: true, runValidators: true }
-    ).select('-password');
-    
+    ).select("-password");
+
     if (!updatedUser) {
-      return NextResponse.json(
-        { message: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
-    
+
     return NextResponse.json({
-      message: 'Address updated successfully',
+      message: "Address updated successfully",
       user: {
         id: updatedUser._id.toString(),
         name: updatedUser.name,
@@ -82,13 +79,13 @@ export async function PUT(request: NextRequest) {
         phoneNumber: updatedUser.phoneNumber,
         role: updatedUser.role,
         avatar: updatedUser.avatar,
-        address: updatedUser.address
-      }
+        address: updatedUser.address,
+      },
     });
   } catch (error) {
-    console.error('Address update error:', error);
+    console.error("Address update error:", error);
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { message: "Internal server error" },
       { status: 500 }
     );
   }
@@ -97,34 +94,31 @@ export async function PUT(request: NextRequest) {
 // DELETE - Remove user address
 export async function DELETE(request: NextRequest) {
   // Authenticate request
-  const user = await authenticate(request);
-  
-  if (!user) {
+  const authResult = await authenticate(request);
+
+  if (authResult.status !== 200 || !authResult.user) {
     return NextResponse.json(
-      { message: 'Unauthorized' },
-      { status: 401 }
+      { message: authResult.message || "Unauthorized" },
+      { status: authResult.status || 401 }
     );
   }
-  
+
   try {
     await connectToDatabase();
-    
+
     // Remove user's address from database
     const updatedUser = await User.findByIdAndUpdate(
-      user.id,
+      authResult.user.id,
       { $unset: { address: 1 } },
       { new: true }
-    ).select('-password');
-    
+    ).select("-password");
+
     if (!updatedUser) {
-      return NextResponse.json(
-        { message: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
-    
+
     return NextResponse.json({
-      message: 'Address removed successfully',
+      message: "Address removed successfully",
       user: {
         id: updatedUser._id.toString(),
         name: updatedUser.name,
@@ -132,13 +126,13 @@ export async function DELETE(request: NextRequest) {
         phoneNumber: updatedUser.phoneNumber,
         role: updatedUser.role,
         avatar: updatedUser.avatar,
-        address: updatedUser.address
-      }
+        address: updatedUser.address,
+      },
     });
   } catch (error) {
-    console.error('Address delete error:', error);
+    console.error("Address delete error:", error);
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { message: "Internal server error" },
       { status: 500 }
     );
   }

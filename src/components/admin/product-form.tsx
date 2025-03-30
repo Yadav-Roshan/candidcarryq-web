@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { X, Plus, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Product } from "@/contexts/cart-context"
-import { useToast } from "@/components/ui/use-toast"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { X, Plus, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Product } from "@/contexts/cart-context";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Form,
   FormControl,
@@ -20,29 +20,31 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
+} from "@/components/ui/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
 // Validation schema
 const productSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters" }),
-  price: z.coerce.number().positive({ message: "Price must be a positive number" }),
+  price: z.coerce
+    .number()
+    .positive({ message: "Price must be a positive number" }),
   salePrice: z.coerce.number().positive().optional().nullable(),
   category: z.string().min(1, { message: "Please select a category" }),
   description: z.string().optional(),
   fullDescription: z.string().optional(),
-  isFeatured: z.boolean().default(false),
+  featured: z.boolean().default(false),
   material: z.string().optional(),
   dimensions: z.string().optional(),
   weight: z.string().optional(),
   capacity: z.string().optional(),
-})
+});
 
 // Available categories
 const categories = [
@@ -51,20 +53,20 @@ const categories = [
   { value: "wallets", label: "Wallets" },
   { value: "travel", label: "Travel" },
   { value: "accessories", label: "Accessories" },
-]
+];
 
 type ProductFormProps = {
   product?: Product;
   isEditing?: boolean;
-}
+};
 
 export function ProductForm({ product, isEditing = false }: ProductFormProps) {
-  const [images, setImages] = useState<string[]>(product?.images || [])
-  const [imageUrl, setImageUrl] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const router = useRouter()
-  const { toast } = useToast()
-  
+  const [images, setImages] = useState<string[]>(product?.images || []);
+  const [imageUrl, setImageUrl] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
+
   // Set up form with default values
   const form = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
@@ -75,66 +77,66 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
       category: product?.category || "",
       description: product?.description || "",
       fullDescription: product?.fullDescription || "",
-      isFeatured: Boolean(product?.isFeatured) || false,
+      featured: Boolean(product?.featured) || false,
       material: product?.material || "",
       dimensions: product?.dimensions || "",
       weight: product?.weight || "",
       capacity: product?.capacity || "",
     },
-  })
-  
+  });
+
   // Add an image URL to the images array
   const addImage = () => {
     if (imageUrl && !images.includes(imageUrl)) {
-      setImages([...images, imageUrl])
-      setImageUrl("")
+      setImages([...images, imageUrl]);
+      setImageUrl("");
     }
-  }
-  
+  };
+
   // Remove an image from the images array
   const removeImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index))
-  }
-  
+    setImages(images.filter((_, i) => i !== index));
+  };
+
   // Form submission handler
   const onSubmit = async (values: z.infer<typeof productSchema>) => {
-    setIsSubmitting(true)
-    
+    setIsSubmitting(true);
+
     try {
       const productData = {
         ...values,
         images,
         id: product?.id || Date.now().toString(), // Generate an ID for new products
         image: images[0] || "", // Set the main image as the first image
-      }
-      
+      };
+
       // Here you would make an API call to save the product
-      console.log('Saving product:', productData)
-      
+      console.log("Saving product:", productData);
+
       // Show success message
       toast({
         title: isEditing ? "Product updated" : "Product created",
-        description: isEditing 
-          ? `${values.name} has been updated successfully` 
+        description: isEditing
+          ? `${values.name} has been updated successfully`
           : `${values.name} has been created successfully`,
-      })
-      
+      });
+
       // Redirect back to products page
       setTimeout(() => {
-        router.push("/admin/products")
-      }, 1000)
+        router.push("/admin/products");
+      }, 1000);
     } catch (error) {
-      console.error("Error saving product:", error)
+      console.error("Error saving product:", error);
       toast({
         title: "Error",
         description: "There was a problem saving the product",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
-  
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -154,7 +156,7 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
                 </FormItem>
               )}
             />
-            
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -169,7 +171,7 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="salePrice"
@@ -177,11 +179,15 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
                   <FormItem>
                     <FormLabel>Sale Price (Optional)</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
+                      <Input
+                        type="number"
                         placeholder="2800"
                         value={field.value || ""}
-                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value ? Number(e.target.value) : null
+                          )
+                        }
                       />
                     </FormControl>
                     <FormDescription>
@@ -192,7 +198,7 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
                 )}
               />
             </div>
-            
+
             <FormField
               control={form.control}
               name="category"
@@ -217,7 +223,7 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="description"
@@ -225,10 +231,10 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
                 <FormItem>
                   <FormLabel>Short Description</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="A brief description" 
+                    <Textarea
+                      placeholder="A brief description"
                       className="resize-none"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormDescription>
@@ -238,7 +244,7 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="fullDescription"
@@ -246,10 +252,10 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
                 <FormItem>
                   <FormLabel>Full Description</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Detailed product description" 
+                    <Textarea
+                      placeholder="Detailed product description"
                       className="resize-none min-h-[150px]"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormDescription>
@@ -259,10 +265,10 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
-              name="isFeatured"
+              name="featured"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                   <FormControl>
@@ -281,7 +287,7 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
               )}
             />
           </div>
-          
+
           {/* Product Details */}
           <div className="space-y-6">
             <div>
@@ -292,16 +298,20 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
                   value={imageUrl}
                   onChange={(e) => setImageUrl(e.target.value)}
                 />
-                <Button type="button" onClick={addImage} className="flex-shrink-0">
+                <Button
+                  type="button"
+                  onClick={addImage}
+                  className="flex-shrink-0"
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {images.map((image, index) => (
                   <div key={index} className="relative group">
-                    <img 
-                      src={image} 
+                    <img
+                      src={image}
                       alt={`Product image ${index + 1}`}
                       className="h-24 w-full object-cover rounded-md border"
                     />
@@ -317,14 +327,14 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
                   </div>
                 ))}
               </div>
-              
+
               {images.length === 0 && (
                 <p className="text-sm text-muted-foreground mt-2">
                   Add at least one image for your product
                 </p>
               )}
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -339,7 +349,7 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="dimensions"
@@ -354,7 +364,7 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
                 )}
               />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -369,7 +379,7 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="capacity"
@@ -386,7 +396,7 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
             </div>
           </div>
         </div>
-        
+
         <div className="flex justify-end gap-4">
           <Button
             type="button"
@@ -402,5 +412,5 @@ export function ProductForm({ product, isEditing = false }: ProductFormProps) {
         </div>
       </form>
     </Form>
-  )
+  );
 }

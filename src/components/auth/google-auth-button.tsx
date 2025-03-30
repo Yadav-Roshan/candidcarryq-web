@@ -15,6 +15,7 @@ declare global {
           initialize: (config: any) => void;
           renderButton: (element: HTMLElement, config: any) => void;
           prompt: () => void;
+          cancel: () => void; // Add the missing 'cancel' method
         };
       };
     };

@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } | Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Authentication middleware
@@ -27,8 +27,8 @@ export async function GET(
     }
 
     // Resolve params if it's a Promise
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const userId = resolvedParams.id;
+    const { id } = await params;
+    const userId = id;
 
     // Handle empty or invalid userId
     if (!userId) {

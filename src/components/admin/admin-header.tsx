@@ -33,6 +33,8 @@ export function AdminHeader() {
   const pathname = usePathname();
 
   const isActive = (path: string) => {
+    if (pathname === null) return false;
+
     if (path === "/admin") {
       return pathname === "/admin";
     }

@@ -25,7 +25,7 @@ type ProductCardProps =
       price: number;
       image: string;
       category?: string;
-      salePrice?: number;
+      salePrice?: number | null;
       rating?: number;
       reviewCount?: number;
       stock?: number;

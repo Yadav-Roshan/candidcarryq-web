@@ -17,7 +17,7 @@ export default function AccountPage() {
 
   // Parse the tab from URL query params
   useEffect(() => {
-    const tabParam = searchParams.get("tab");
+    const tabParam = searchParams?.get("tab");
     if (
       tabParam &&
       ["profile", "address", "orders", "settings"].includes(tabParam)

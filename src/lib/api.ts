@@ -11,6 +11,29 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/product.model";
 import mongoose from "mongoose";
 
+// Define interface for Product document
+interface ProductDocument {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  description: string;
+  price: number;
+  salePrice?: number;
+  category: string;
+  image: string;
+  images?: string[];
+  colors?: string[];
+  material?: string;
+  rating?: number;
+  reviewCount?: number;
+  stock: number;
+  featured?: boolean;
+  fullDescription?: string;
+  dimensions?: string;
+  weight?: string;
+  capacity?: string;
+  sizes?: string[];
+}
+
 // Helper to check if ID is a valid MongoDB ObjectId
 function isValidObjectId(id: string): boolean {
   return mongoose.Types.ObjectId.isValid(id);
@@ -52,12 +75,12 @@ export const getAllProducts = cache(async (paramsInput: any = {}) => {
 
     // Colors filter (using $in operator to match any of the specified colors)
     if (colors && colors.length > 0) {
-      query.colors = { $in: colors.map((c) => new RegExp(c, "i")) }; // Case insensitive
+      query.colors = { $in: colors.map((c: any) => new RegExp(c, "i")) }; // Case insensitive
     }
 
     // Materials filter
     if (materials && materials.length > 0) {
-      query.material = { $in: materials.map((m) => new RegExp(m, "i")) }; // Case insensitive
+      query.material = { $in: materials.map((m: any) => new RegExp(m, "i")) }; // Case insensitive
     }
 
     console.log("Product filter query:", JSON.stringify(query, null, 2));
@@ -83,10 +106,10 @@ export const getAllProducts = cache(async (paramsInput: any = {}) => {
 
     // Execute query with pagination
     const skip = (page - 1) * limit;
-    const products = await Product.find(query)
+    const products = (await Product.find(query)
       .sort(sortOption)
       .skip(skip)
-      .limit(limit);
+      .limit(limit)) as ProductDocument[];
 
     // Log how many products matched the filter
     console.log(`Found ${products.length} products matching the filters`);
@@ -127,7 +150,7 @@ export const getProductById = cache(async (id: string) => {
       return null; // Return null instead of checking mock data
     }
 
-    const product = await Product.findById(id);
+    const product = (await Product.findById(id)) as ProductDocument | null;
 
     if (!product) {
       console.log(`Product ${id} not found`);
@@ -164,7 +187,9 @@ export const getFeaturedProducts = cache(async () => {
   try {
     await connectToDatabase();
 
-    const featuredProducts = await Product.find({ featured: true }).limit(8);
+    const featuredProducts = (await Product.find({ featured: true }).limit(
+      8
+    )) as ProductDocument[];
 
     if (featuredProducts.length === 0) {
       // Return empty array instead of mock products

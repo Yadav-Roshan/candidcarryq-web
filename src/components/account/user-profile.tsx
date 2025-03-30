@@ -58,7 +58,7 @@ export function UserProfile() {
       const success = await updateUserProfile({
         name: formData.name,
         email: formData.email,
-        phoneNumber: formData.phoneNumber || null, // Send null if empty string
+        phoneNumber: formData.phoneNumber || undefined, // Send undefined if empty string
       });
 
       if (success) {

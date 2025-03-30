@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 
 interface OrderSummary {
   totalOrders: number;
@@ -25,8 +25,21 @@ export default function OrdersSummary() {
       try {
         setIsLoading(true);
         const token = localStorage.getItem("authToken");
-        
-        if (!token) return;
+
+        if (!token) {
+          console.error("No auth token found");
+          // Show mock data for demonstration
+          setSummary({
+            totalOrders: 24,
+            pendingPayment: 5,
+            processing: 3,
+            shipped: 7,
+            delivered: 8,
+            cancelled: 1,
+            revenue: 125750,
+          });
+          return;
+        }
 
         const response = await fetch("/api/admin/orders/summary", {
           headers: {
@@ -38,7 +51,8 @@ export default function OrdersSummary() {
           const data = await response.json();
           setSummary(data);
         } else {
-          // If API is not yet implemented, show mock data
+          console.error("Error fetching summary:", await response.text());
+          // Show mock data on error
           setSummary({
             totalOrders: 24,
             pendingPayment: 5,
@@ -85,9 +99,9 @@ export default function OrdersSummary() {
   if (!summary) return null;
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NP', {
-      style: 'currency',
-      currency: 'NPR',
+    return new Intl.NumberFormat("en-NP", {
+      style: "currency",
+      currency: "NPR",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -115,39 +129,42 @@ export default function OrdersSummary() {
         <div className="mt-6 space-y-2">
           <h4 className="text-sm font-medium">Order Status</h4>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <Link href="/admin/orders?status=pending" className="flex justify-between p-2 hover:bg-muted rounded-md">
-              <span>Pending Payment</span>ending"
-              <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700">
+            <Link
+              href="/admin/orders?status=pending"
+              className="flex justify-between p-2 hover:bg-muted rounded-md"
+            >
+              <span>Pending Payment</span>
+              <Badge
+                variant="outline"
+                className="bg-yellow-500/10 text-yellow-700"
+              >
                 {summary.pendingPayment}
-              </Badge>nding Payment</span>
-            </Link>e
-            <Link href="/admin/orders?status=processing" className="flex justify-between p-2 hover:bg-muted rounded-md">
-              <span>Processing</span>500/10 text-yellow-700"
+              </Badge>
+            </Link>
+
+            <Link
+              href="/admin/orders?status=processing"
+              className="flex justify-between p-2 hover:bg-muted rounded-md"
+            >
+              <span>Processing</span>
               <Badge variant="outline" className="bg-blue-500/10 text-blue-700">
-                {summary.processing}ent}
+                {summary.processing}
               </Badge>
             </Link>
-            <Link href="/admin/orders?status=shipped" className="flex justify-between p-2 hover:bg-muted rounded-md">
-              <span>Shipped</span>status=processing"
-              <Badge variant="outline" className="bg-amber-500/10 text-amber-700">
-                {summary.shipped}
-              </Badge>ocessing</span>
-            </Link>e variant="outline" className="bg-blue-500/10 text-blue-700">
-            <Link href="/admin/orders?status=delivered" className="flex justify-between p-2 hover:bg-muted rounded-md">
-              <span>Delivered</span>
-              <Badge variant="outline" className="bg-green-500/10 text-green-700">
-                {summary.delivered}
-              </Badge>dmin/orders?status=shipped"
-            </Link>Name="flex justify-between p-2 hover:bg-muted rounded-md"
-          </div>
-        </div><span>Shipped</span>
-      </CardContent>
-    </Card>     variant="outline"
-  );            className="bg-amber-500/10 text-amber-700"
-}             >
+
+            <Link
+              href="/admin/orders?status=shipped"
+              className="flex justify-between p-2 hover:bg-muted rounded-md"
+            >
+              <span>Shipped</span>
+              <Badge
+                variant="outline"
+                className="bg-amber-500/10 text-amber-700"
+              >
                 {summary.shipped}
               </Badge>
             </Link>
+
             <Link
               href="/admin/orders?status=delivered"
               className="flex justify-between p-2 hover:bg-muted rounded-md"

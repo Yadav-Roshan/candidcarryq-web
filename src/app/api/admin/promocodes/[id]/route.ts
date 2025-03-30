@@ -35,8 +35,9 @@ function isValidObjectId(id: string): boolean {
 // GET - Get single promocode (admin only)
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     await connectToDatabase();
 
@@ -58,7 +59,7 @@ export async function GET(
     }
 
     // Validate id
-    if (!isValidObjectId(params.id)) {
+    if (!isValidObjectId(id)) {
       return NextResponse.json(
         { message: "Invalid promocode ID" },
         { status: 400 }
@@ -66,7 +67,7 @@ export async function GET(
     }
 
     // Get promocode
-    const promocode = await PromoCode.findById(params.id);
+    const promocode = await PromoCode.findById(id);
     if (!promocode) {
       return NextResponse.json(
         { message: "Promo code not found" },
@@ -76,7 +77,7 @@ export async function GET(
 
     return NextResponse.json({ promocode });
   } catch (error) {
-    console.error(`Error fetching promocode ${params.id}:`, error);
+    console.error(`Error fetching promocode ${id}:`, error);
     return NextResponse.json(
       { message: "Error fetching promocode" },
       { status: 500 }
@@ -87,8 +88,9 @@ export async function GET(
 // PUT - Update promocode (admin only)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     await connectToDatabase();
 
@@ -110,7 +112,7 @@ export async function PUT(
     }
 
     // Validate id
-    if (!isValidObjectId(params.id)) {
+    if (!isValidObjectId(id)) {
       return NextResponse.json(
         { message: "Invalid promocode ID" },
         { status: 400 }
@@ -143,11 +145,9 @@ export async function PUT(
     }
 
     // Update promocode
-    const updatedPromoCode = await PromoCode.findByIdAndUpdate(
-      params.id,
-      updateData,
-      { new: true }
-    );
+    const updatedPromoCode = await PromoCode.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
 
     if (!updatedPromoCode) {
       return NextResponse.json(
@@ -161,7 +161,7 @@ export async function PUT(
       promocode: updatedPromoCode,
     });
   } catch (error) {
-    console.error(`Error updating promocode ${params.id}:`, error);
+    console.error(`Error updating promocode ${id}:`, error);
     return NextResponse.json(
       { message: "Error updating promocode" },
       { status: 500 }
@@ -172,8 +172,9 @@ export async function PUT(
 // DELETE - Delete promocode (admin only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     await connectToDatabase();
 
@@ -195,7 +196,7 @@ export async function DELETE(
     }
 
     // Validate id
-    if (!isValidObjectId(params.id)) {
+    if (!isValidObjectId(id)) {
       return NextResponse.json(
         { message: "Invalid promocode ID" },
         { status: 400 }
@@ -203,7 +204,7 @@ export async function DELETE(
     }
 
     // Delete promocode
-    const result = await PromoCode.findByIdAndDelete(params.id);
+    const result = await PromoCode.findByIdAndDelete(id);
     if (!result) {
       return NextResponse.json(
         { message: "Promo code not found" },
@@ -215,7 +216,7 @@ export async function DELETE(
       message: "Promo code deleted successfully",
     });
   } catch (error) {
-    console.error(`Error deleting promocode ${params.id}:`, error);
+    console.error(`Error deleting promocode ${id}:`, error);
     return NextResponse.json(
       { message: "Error deleting promocode" },
       { status: 500 }

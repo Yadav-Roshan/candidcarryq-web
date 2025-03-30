@@ -10,10 +10,10 @@ export async function GET(request: NextRequest) {
   try {
     // Authentication middleware - updated to use the new format
     const authResult = await authenticate(request);
-    if (authResult.status !== 200) {
+    if (authResult.status !== 200 || !authResult.user) {
       return NextResponse.json(
         { message: authResult.message || "Unauthorized" },
-        { status: authResult.status }
+        { status: authResult.status || 401 }
       );
     }
 
@@ -54,12 +54,14 @@ export async function POST(request: NextRequest) {
   try {
     // Authentication middleware
     const authResult = await authenticate(request);
+    if (authResult.status !== 200 || !authResult.user) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status || 401 }
+      );
+    }
 
     const user = authResult.user;
-
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
 
     // Parse and validate request body
     const { productId } = await request.json();
@@ -108,12 +110,14 @@ export async function DELETE(request: NextRequest) {
   try {
     // Authentication middleware
     const authResult = await authenticate(request);
+    if (authResult.status !== 200 || !authResult.user) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status || 401 }
+      );
+    }
 
     const user = authResult.user;
-
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
 
     // Parse URL to get product ID
     const url = new URL(request.url);

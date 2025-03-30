@@ -16,14 +16,15 @@ const reviewSchema = z.object({
 // GET - Get reviews for a product
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     await connectToDatabase();
 
     // Make sure params is resolved before accessing its properties
     const resolvedParams = params instanceof Promise ? await params : params;
-    const productId = resolvedParams.id;
+    const productId = id;
 
     // Check if it's a valid MongoDB ObjectId
     if (!mongoose.Types.ObjectId.isValid(productId)) {
@@ -58,21 +59,25 @@ export async function GET(
 // POST - Create a new review
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();
 
     // Authentication check
-    const user = await authenticate(request);
-
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200 || !authResult.user) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status || 401 }
+      );
     }
 
+    const user = authResult.user;
+
     // Make sure params is resolved before accessing its properties
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const productId = resolvedParams.id;
+    const { id } = await params;
+    const productId = id;
 
     // Check if product exists (handle both MongoDB and mock data)
     let productExists = false;

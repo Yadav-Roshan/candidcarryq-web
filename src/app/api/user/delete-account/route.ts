@@ -6,11 +6,16 @@ import { cleanupAuthData } from "@/lib/server/auth-helpers";
 
 export async function DELETE(request: NextRequest) {
   // Authenticate the request
-  const user = await authenticate(request);
+  const authResult = await authenticate(request);
 
-  if (!user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  if (authResult.status !== 200 || !authResult.user) {
+    return NextResponse.json(
+      { message: authResult.message || "Unauthorized" },
+      { status: authResult.status || 401 }
+    );
   }
+
+  const user = authResult.user;
 
   try {
     await connectToDatabase();

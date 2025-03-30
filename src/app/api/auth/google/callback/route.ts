@@ -4,6 +4,15 @@ import jwt from "jsonwebtoken";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/user.model";
 
+// Define interface for Google user info
+interface GoogleUserInfo {
+  sub: string;
+  name: string;
+  email: string;
+  picture: string;
+  email_verified?: boolean;
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get("code");
@@ -37,7 +46,7 @@ export async function GET(request: NextRequest) {
       url: "https://www.googleapis.com/oauth2/v3/userinfo",
     });
 
-    const userInfo = userInfoResponse.data;
+    const userInfo = userInfoResponse.data as GoogleUserInfo;
 
     // Connect to database
     await connectToDatabase();

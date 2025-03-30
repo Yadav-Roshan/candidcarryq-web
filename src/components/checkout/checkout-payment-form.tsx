@@ -293,8 +293,9 @@ export default function CheckoutPaymentForm({
                 <CldUploadWidget
                   options={uploadOptions}
                   onUpload={() => setIsUploading(true)}
-                  onComplete={() => setIsUploading(false)}
+                  onClose={() => setIsUploading(false)}
                   onSuccess={(result) => {
+                    setIsUploading(false); // Also set uploading to false on success
                     if (result?.info) {
                       handleImageUpload(result.info as CloudinaryUploadResult);
                     }
