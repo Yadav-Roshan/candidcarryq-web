@@ -1,39 +1,48 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Menu, ShoppingCart, User, Search, Sun, Moon, Home, Heart, Package, Grid } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
-import { Button } from "@/components/ui/button"
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetTrigger 
-} from "@/components/ui/sheet"
-import { Input } from "@/components/ui/input"
-import { useTheme } from "next-themes"
-import { Badge } from "@/components/ui/badge"
-import { useCart } from "@/contexts/cart-context"
-import { useWishlist } from "@/contexts/wishlist-context"
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  Menu,
+  ShoppingCart,
+  User,
+  Search,
+  Sun,
+  Moon,
+  Home,
+  Heart,
+  Package,
+  Grid,
+  LogIn,
+} from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { useTheme } from "next-themes";
+import { Badge } from "@/components/ui/badge";
+import { useCart } from "@/contexts/cart-context";
+import { useWishlist } from "@/contexts/wishlist-context";
+import { UserAvatarMenu } from "@/components/user-avatar-menu";
 
 export default function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const { theme, setTheme } = useTheme()
-  const router = useRouter()
-  const { user } = useAuth() // Get user from auth context
-  
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const { theme, setTheme } = useTheme();
+  const router = useRouter();
+  const { user } = useAuth(); // Get user from auth context
+
   // Add mounting state to prevent hydration mismatch
-  const [mounted, setMounted] = useState(false)
-  const { totalItems: cartItems } = useCart()
-  const { totalItems: wishlistItems } = useWishlist()
-  
+  const [mounted, setMounted] = useState(false);
+  const { totalItems: cartItems } = useCart();
+  const { totalItems: wishlistItems } = useWishlist();
+
   // Set mounted to true after component mounts
   useEffect(() => {
-    setMounted(true)
-  }, [])
-  
+    setMounted(true);
+  }, []);
+
   // Return null on server or during first render on client
   if (!mounted) {
     // You can render a placeholder with the same structure to avoid layout shift
@@ -44,7 +53,7 @@ export default function Header() {
           <div className="flex items-center">
             <span className="text-xl font-bold">CandidWear</span>
           </div>
-          
+
           {/* Placeholder for buttons */}
           <div className="flex items-center space-x-2">
             <div className="h-9 w-9"></div>
@@ -53,17 +62,17 @@ export default function Header() {
           </div>
         </div>
       </header>
-    )
+    );
   }
-  
+
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
-      setSearchQuery("")
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
     }
-  }
-  
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-black text-white">
       <div className="container flex h-16 items-center justify-between">
@@ -75,7 +84,10 @@ export default function Header() {
         </div>
 
         {/* Search Bar - Desktop */}
-        <form onSubmit={handleSearch} className="hidden md:flex md:w-full max-w-sm mx-4 lg:mx-8">
+        <form
+          onSubmit={handleSearch}
+          className="hidden md:flex md:w-full max-w-sm mx-4 lg:mx-8"
+        >
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -90,132 +102,181 @@ export default function Header() {
 
         {/* Desktop navigation - Complete horizontal menu */}
         <nav className="hidden md:flex items-center space-x-6">
-          <Link href="/" className="text-sm font-medium text-gray-300 hover:text-white flex items-center gap-1 transition-colors">
+          <Link
+            href="/"
+            className="text-sm font-medium text-gray-300 hover:text-white flex items-center gap-1 transition-colors"
+          >
             <Home className="h-4 w-4" />
             <span>Home</span>
           </Link>
-          <Link href="/products" className="text-sm font-medium text-gray-300 hover:text-white flex items-center gap-1 transition-colors">
+          <Link
+            href="/products"
+            className="text-sm font-medium text-gray-300 hover:text-white flex items-center gap-1 transition-colors"
+          >
             <Package className="h-4 w-4" />
             <span>Products</span>
           </Link>
-          <Link href="/categories" className="text-sm font-medium text-gray-300 hover:text-white flex items-center gap-1 transition-colors">
+          <Link
+            href="/categories"
+            className="text-sm font-medium text-gray-300 hover:text-white flex items-center gap-1 transition-colors"
+          >
             <Grid className="h-4 w-4" />
             <span>Categories</span>
           </Link>
-          <Link href="/account" className="text-sm font-medium text-gray-300 hover:text-white flex items-center gap-1 transition-colors">
-            <User className="h-4 w-4" />
-            <span>Account</span>
-          </Link>
-          
+
+          {/* Show either avatar menu or login link based on auth status */}
+          {user ? (
+            <UserAvatarMenu />
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="text-black dark:text-white"
+            >
+              <Link href="/login" className="flex items-center gap-1">
+                <LogIn className="h-4 w-4" />
+                <span>Sign In</span>
+              </Link>
+            </Button>
+          )}
+
           {/* Admin link in desktop nav - Only for admins */}
-          {user?.role === 'admin' && (
-            <Link href="/admin" className="text-sm font-medium text-primary hover:text-primary-foreground transition-colors">
+          {user?.role === "admin" && (
+            <Link
+              href="/admin"
+              className="text-sm font-medium text-primary hover:text-primary-foreground transition-colors"
+            >
               Admin Dashboard
             </Link>
           )}
         </nav>
 
-        {/* Right side buttons */}
-        <div className="flex items-center space-x-2">
-          {/* Theme Toggle */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
+        {/* Right-side buttons */}
+        <div className="flex items-center gap-2">
+          {/* Wishlist */}
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="relative text-gray-300 hover:text-white"
+          >
+            <Link href="/wishlist">
+              <Heart className="h-5 w-5" />
+              {wishlistItems > 0 && (
+                <Badge className="absolute -right-1 -top-1 px-1 min-w-4 h-4 flex items-center justify-center text-xs">
+                  {wishlistItems}
+                </Badge>
+              )}
+              <span className="sr-only">Wishlist</span>
+            </Link>
+          </Button>
+
+          {/* Cart */}
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="relative text-gray-300 hover:text-white"
+          >
+            <Link href="/cart">
+              <ShoppingCart className="h-5 w-5" />
+              {cartItems > 0 && (
+                <Badge className="absolute -right-1 -top-1 px-1 min-w-4 h-4 flex items-center justify-center text-xs">
+                  {cartItems}
+                </Badge>
+              )}
+              <span className="sr-only">Cart</span>
+            </Link>
+          </Button>
+
+          {/* Theme toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
             aria-label="Toggle Theme"
+            className="text-gray-300 hover:text-white"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="text-gray-300 hover:text-white hover:bg-gray-800"
           >
             {theme === "dark" ? (
               <Sun className="h-5 w-5" />
             ) : (
               <Moon className="h-5 w-5" />
             )}
-            <span className="sr-only">Toggle Theme</span>
           </Button>
 
-          {/* Wishlist with Item Count */}
-          <Link href="/wishlist" passHref>
-            <Button variant="ghost" size="icon" aria-label="Wishlist" className="relative text-gray-300 hover:text-white hover:bg-gray-800">
-              <Heart className="h-5 w-5" />
-              {wishlistItems > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                  {wishlistItems}
-                </Badge>
-              )}
-              <span className="sr-only">Wishlist</span>
-            </Button>
-          </Link>
-
-          {/* Cart with Item Count */}
-          <Link href="/cart" passHref>
-            <Button variant="ghost" size="icon" aria-label="Cart" className="relative text-gray-300 hover:text-white hover:bg-gray-800">
-              <ShoppingCart className="h-5 w-5" />
-              {cartItems > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                  {cartItems}
-                </Badge>
-              )}
-              <span className="sr-only">Cart</span>
-            </Button>
-          </Link>
-
-          {/* Mobile Menu Button - Only visible on mobile */}
+          {/* Mobile menu button */}
           <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Menu" className="md:hidden text-gray-300 hover:text-white hover:bg-gray-800">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Menu"
+                className="md:hidden text-gray-300 hover:text-white hover:bg-gray-800"
+              >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Menu</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">
               <nav className="flex flex-col gap-4">
-                <Link 
-                  href="/" 
+                <Link
+                  href="/"
                   onClick={() => setIsMenuOpen(false)}
                   className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
                 >
                   <Home className="h-5 w-5" /> Home
                 </Link>
-                <Link 
-                  href="/products" 
+                <Link
+                  href="/products"
                   onClick={() => setIsMenuOpen(false)}
                   className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
                 >
                   <Package className="h-5 w-5" /> Products
                 </Link>
-                <Link 
-                  href="/categories" 
+                <Link
+                  href="/categories"
                   onClick={() => setIsMenuOpen(false)}
                   className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
                 >
                   <Grid className="h-5 w-5" /> Categories
                 </Link>
-                <Link 
-                  href="/cart" 
+                <Link
+                  href="/cart"
                   onClick={() => setIsMenuOpen(false)}
                   className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
                 >
                   <ShoppingCart className="h-5 w-5" /> Cart
                 </Link>
-                <Link 
-                  href="/wishlist" 
+                <Link
+                  href="/wishlist"
                   onClick={() => setIsMenuOpen(false)}
                   className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
                 >
                   <Heart className="h-5 w-5" /> Wishlist
                 </Link>
-                <Link 
-                  href="/account" 
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
-                >
-                  <User className="h-5 w-5" /> Account
-                </Link>
-                
+                {user ? (
+                  <Link
+                    href="/account"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
+                  >
+                    <User className="h-5 w-5" /> Account
+                  </Link>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors text-black dark:text-white"
+                  >
+                    <LogIn className="h-5 w-5" /> Sign In
+                  </Link>
+                )}
+
                 {/* Admin Link - Only show if user has admin role */}
-                {user?.role === 'admin' && (
-                  <Link 
-                    href="/admin" 
+                {user?.role === "admin" && (
+                  <Link
+                    href="/admin"
                     onClick={() => setIsMenuOpen(false)}
                     className="flex items-center gap-2 text-lg font-medium border-t pt-4 mt-2"
                   >
@@ -242,5 +303,5 @@ export default function Header() {
         </div>
       </form>
     </header>
-  )
+  );
 }

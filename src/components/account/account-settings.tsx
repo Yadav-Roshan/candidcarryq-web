@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LogOut, Trash2, AlertTriangle } from "lucide-react";
+import { Trash2, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,15 +54,6 @@ export function AccountSettings() {
       title: "Preferences updated",
       description: "Your notification preferences have been saved",
     });
-  };
-
-  const handleSignOut = () => {
-    logout();
-    toast({
-      title: "Signed out",
-      description: "You have been signed out successfully",
-    });
-    router.push("/");
   };
 
   const handleDeleteAccount = async () => {
@@ -198,29 +189,6 @@ export function AccountSettings() {
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Sign Out Option */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Sign Out</CardTitle>
-          <CardDescription>
-            Sign out of your account on this device
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            You will need to sign in with Google again next time you visit.
-          </p>
-          <Button
-            variant="outline"
-            onClick={handleSignOut}
-            className="flex items-center gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </Button>
         </CardContent>
       </Card>
 

@@ -32,40 +32,6 @@ export function GoogleAuthButton() {
   const buttonRef = useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Function to initialize Google auth when needed
-  const initializeGoogleAuth = () => {
-    if (!window.google?.accounts?.id || !buttonRef.current) return;
-
-    try {
-      // Clear any previous instances first
-      window.google.accounts.id.cancel();
-
-      window.google.accounts.id.initialize({
-        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-        callback: handleGoogleResponse,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
-
-      // Render the button manually to the ref
-      if (buttonRef.current) {
-        window.google.accounts.id.renderButton(buttonRef.current, {
-          type: "standard",
-          theme: "outline",
-          size: "large",
-          text: "continue_with",
-          width: "100%",
-          logo_alignment: "center",
-        });
-      }
-
-      setIsInitialized(true);
-    } catch (err) {
-      console.error("Google Sign-In initialization error:", err);
-      setScriptError(true);
-    }
-  };
-
   // Reset any Google sign-in state when the component mounts
   useEffect(() => {
     // Add a small cleanup function to run on mount and unmount
@@ -87,8 +53,73 @@ export function GoogleAuthButton() {
     return cleanup;
   }, []);
 
+  // Add an effect to detect refresh parameter in URL
   useEffect(() => {
-    // Clear any console errors
+    // Check if we just got redirected after logout
+    const url = new URL(window.location.href);
+    const refreshParam = url.searchParams.get("refresh");
+
+    if (refreshParam === "true") {
+      // Clear the parameter from URL to avoid future refreshes
+      url.searchParams.delete("refresh");
+      window.history.replaceState({}, document.title, url.toString());
+
+      // Force re-initialization of Google auth
+      setIsInitialized(false);
+
+      // Give Google a moment to clean up
+      setTimeout(() => {
+        if (window.google?.accounts?.id) {
+          try {
+            window.google.accounts.id.cancel();
+            console.log("Google auth state reset after refresh");
+          } catch (e) {
+            console.log("Error in post-refresh cleanup", e);
+          }
+        }
+      }, 300);
+    }
+  }, []);
+
+  // Function to initialize Google auth when needed
+  const initializeGoogleAuth = () => {
+    if (!window.google?.accounts?.id || !buttonRef.current) return;
+
+    try {
+      // Make sure we've cleaned up properly before re-initializing
+      window.google.accounts.id.cancel();
+
+      // Small delay to let Google's internal state update
+      setTimeout(() => {
+        window.google.accounts.id.initialize({
+          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+          callback: handleGoogleResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
+
+        // Render the button manually to the ref
+        if (buttonRef.current) {
+          window.google.accounts.id.renderButton(buttonRef.current, {
+            type: "standard",
+            theme: "outline",
+            size: "large",
+            text: "continue_with",
+            width: "100%",
+            logo_alignment: "center",
+          });
+        }
+
+        setIsInitialized(true);
+      }, 100);
+    } catch (err) {
+      console.error("Google Sign-In initialization error:", err);
+      setScriptError(true);
+    }
+  };
+
+  // Clear any console errors
+  useEffect(() => {
     const originalConsoleError = console.error;
     console.error = (...args) => {
       if (
