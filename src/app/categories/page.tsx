@@ -9,7 +9,7 @@ import { getAllProducts } from "@/lib/server-api";
 import { NoProducts } from "@/components/products/no-products";
 
 export const metadata: Metadata = {
-  title: "Product Categories - CandidWear",
+  title: "Product Categories - CandidCarryq",
   description: "Browse products by category",
 };
 

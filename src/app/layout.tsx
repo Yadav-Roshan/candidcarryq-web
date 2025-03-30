@@ -11,12 +11,13 @@ import { WishlistProvider } from "@/contexts/wishlist-context";
 import { AnnouncementProvider } from "@/contexts/announcement-context";
 import { AnnouncementBanner } from "@/components/announcement-banner";
 import { AuthStateHandler } from "@/components/common/auth-state-handler";
+import { WhatsAppButton } from "@/components/whatsapp-button"; // Import the WhatsApp button
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "CandidWear - Premium Bags & Accessories",
-  description: "Discover premium quality bags and accessories at CandidWear.",
+  title: "CandidCarryq - Premium Bags & Accessories",
+  description: "Discover premium quality bags and accessories at CandidCarryq.",
 };
 
 export default function RootLayout({
@@ -43,6 +44,12 @@ export default function RootLayout({
                     <Header />
                     <main className="flex-1">{children}</main>
                     <Footer />
+                    {/* Add WhatsApp button with your business phone number */}
+                    <WhatsAppButton
+                      phoneNumber="+9779812138824" // Change to your preferred phone number
+                      message="Hello from CandidCarryq! I'm interested in your products." // Change to your preferred default message
+                      size="md" // Use larger size option
+                    />
                   </div>
                   <Toaster />
                 </AnnouncementProvider>

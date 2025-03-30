@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
         {
           status: "pending",
           timestamp: new Date(),
-          note: "Order placed",
+          note: "Order placed with CandidCarryq",
         },
       ],
     });

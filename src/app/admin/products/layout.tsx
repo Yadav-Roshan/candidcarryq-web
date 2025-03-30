@@ -1,14 +1,14 @@
-import { Metadata } from "next"
+import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Products - CandidWear Admin",
+  title: "Products - CandidCarryq Admin",
   description: "Manage your product inventory",
-}
+};
 
 export default function ProductsLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  return <>{children}</>
+  return <>{children}</>;
 }
