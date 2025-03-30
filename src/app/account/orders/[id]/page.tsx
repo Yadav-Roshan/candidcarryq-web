@@ -207,6 +207,46 @@ export default function OrderDetailPage() {
     return null;
   };
 
+  // Helper function to get the most recent status
+  const getMostRecentStatus = (statusHistory: any[] = [], type: string) => {
+    if (!statusHistory || !Array.isArray(statusHistory)) {
+      return null;
+    }
+
+    // Filter by status type (payment or order related status)
+    const relevantStatuses = statusHistory.filter((entry) => {
+      if (type === "payment") {
+        return ["pending", "verified", "rejected"].includes(entry.status);
+      } else {
+        return [
+          "pending",
+          "processing",
+          "shipped",
+          "delivered",
+          "cancelled",
+        ].includes(entry.status);
+      }
+    });
+
+    // Sort by timestamp (newest first)
+    relevantStatuses.sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    return relevantStatuses[0] || null;
+  };
+
+  // Get the most current status from status history if available
+  const currentOrderStatus =
+    order?.statusHistory?.length > 0
+      ? getMostRecentStatus(order.statusHistory, "order")?.status ||
+        order.orderStatus
+      : order?.orderStatus;
+
+  // Use the current status for display
+  const currentStep = order ? getOrderStatusStep(currentOrderStatus || "") : 0;
+
   // Loading state
   if (isLoading) {
     return (
@@ -246,8 +286,6 @@ export default function OrderDetailPage() {
       </div>
     );
   }
-
-  const currentStep = getOrderStatusStep(order.orderStatus);
 
   return (
     <div className="container py-8">
@@ -869,37 +907,37 @@ export default function OrderDetailPage() {
                     Order Status
                   </h3>
                   <div className="flex items-center mt-1">
-                    {order.orderStatus === "pending" && (
+                    {currentOrderStatus === "pending" && (
                       <Clock className="h-4 w-4 text-yellow-500 mr-2" />
                     )}
-                    {order.orderStatus === "processing" && (
+                    {currentOrderStatus === "processing" && (
                       <Package className="h-4 w-4 text-blue-500 mr-2" />
                     )}
-                    {order.orderStatus === "shipped" && (
+                    {currentOrderStatus === "shipped" && (
                       <Truck className="h-4 w-4 text-amber-500 mr-2" />
                     )}
-                    {order.orderStatus === "delivered" && (
+                    {currentOrderStatus === "delivered" && (
                       <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
                     )}
-                    {order.orderStatus === "cancelled" && (
+                    {currentOrderStatus === "cancelled" && (
                       <XCircle className="h-4 w-4 text-red-500 mr-2" />
                     )}
                     <span className="font-medium capitalize">
-                      {order.orderStatus}
+                      {currentOrderStatus}
                     </span>
                   </div>
                 </div>
-                <OrderStatusBadge status={order.orderStatus} />
+                <OrderStatusBadge status={currentOrderStatus || ""} />
               </div>
               <p className="text-sm text-muted-foreground">
-                {order.orderStatus === "pending" &&
+                {currentOrderStatus === "pending" &&
                   "Your order is waiting to be processed"}
-                {order.orderStatus === "processing" &&
+                {currentOrderStatus === "processing" &&
                   "Your order is being prepared"}
-                {order.orderStatus === "shipped" && "Your order is on its way"}
-                {order.orderStatus === "delivered" &&
+                {currentOrderStatus === "shipped" && "Your order is on its way"}
+                {currentOrderStatus === "delivered" &&
                   "Your order has been delivered"}
-                {order.orderStatus === "cancelled" &&
+                {currentOrderStatus === "cancelled" &&
                   "Your order has been cancelled"}
               </p>
             </div>
