@@ -1,102 +1,114 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect } from "react"
+import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 
 interface Announcement {
-  id: string;
-  text: string;
-  link?: string;
-  active: boolean;
-  startDate?: string;
-  endDate?: string;
+  id: string
+  text: string
+  link?: string
+  active: boolean
+  startDate?: string
+  endDate?: string
 }
 
 interface AnnouncementContextType {
-  announcements: Announcement[];
-  currentAnnouncement: Announcement | null;
-  addAnnouncement: (announcement: Omit<Announcement, "id">) => void;
-  updateAnnouncement: (id: string, announcement: Partial<Announcement>) => void;
-  deleteAnnouncement: (id: string) => void;
-  isAnnouncementVisible: boolean;
-  setAnnouncementVisible: (visible: boolean) => void;
+  announcements: Announcement[]
+  currentAnnouncement: Announcement | null
+  isAnnouncementVisible: boolean
+  setAnnouncementVisible: (visible: boolean) => void
+  addAnnouncement: (announcement: Omit<Announcement, 'id'>) => void
+  updateAnnouncement: (id: string, data: Partial<Omit<Announcement, 'id'>>) => void
+  deleteAnnouncement: (id: string) => void
 }
 
 const AnnouncementContext = createContext<AnnouncementContextType | undefined>(undefined)
 
-export function AnnouncementProvider({ children }: { children: React.ReactNode }) {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([])
-  const [isAnnouncementVisible, setAnnouncementVisible] = useState(true)
+export function AnnouncementProvider({ children }: { children: ReactNode }) {
+  const [announcements, setAnnouncements] = useState<Announcement[]>([
+    {
+      id: "1",
+      text: "Summer Sale! Get 20% off on all products",
+      link: "/products",
+      active: true,
+      startDate: "2023-08-01",
+      endDate: "2023-09-30"
+    }
+  ])
   
-  // Load announcements from localStorage on mount
-  useEffect(() => {
-    const storedAnnouncements = localStorage.getItem("announcements")
-    if (storedAnnouncements) {
-      try {
-        setAnnouncements(JSON.parse(storedAnnouncements))
-      } catch (err) {
-        console.error("Failed to parse announcements from localStorage", err)
-      }
-    }
-  }, [])
-
-  // Save announcements to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem("announcements", JSON.stringify(announcements))
-  }, [announcements])
-
-  const addAnnouncement = (announcement: Omit<Announcement, "id">) => {
-    const newAnnouncement = {
-      ...announcement,
-      id: Date.now().toString(),
-    }
+  const [isAnnouncementVisible, setIsAnnouncementVisible] = useState(true)
+  const [currentAnnouncementId, setCurrentAnnouncementId] = useState<string | null>("1")
+  
+  // Get the current announcement to display
+  const currentAnnouncement = currentAnnouncementId 
+    ? announcements.find(a => a.id === currentAnnouncementId) || null
+    : null
+  
+  // Add a new announcement
+  const addAnnouncement = (announcement: Omit<Announcement, 'id'>) => {
+    const newId = Date.now().toString()
+    const newAnnouncement = { ...announcement, id: newId }
     
     setAnnouncements(prev => [...prev, newAnnouncement])
+    
+    // If this is the first active announcement, set it as current
+    if (announcement.active && currentAnnouncementId === null) {
+      setCurrentAnnouncementId(newId)
+      setIsAnnouncementVisible(true)
+    }
   }
-
-  const updateAnnouncement = (id: string, data: Partial<Announcement>) => {
+  
+  // Update an existing announcement
+  const updateAnnouncement = (id: string, data: Partial<Omit<Announcement, 'id'>>) => {
     setAnnouncements(prev => 
       prev.map(announcement => 
-        announcement.id === id ? { ...announcement, ...data } : announcement
+        announcement.id === id 
+          ? { ...announcement, ...data } 
+          : announcement
       )
     )
+    
+    // If updating current announcement's active status to false, find new current
+    if (id === currentAnnouncementId && data.active === false) {
+      const nextAnnouncement = announcements
+        .find(a => a.id !== id && a.active === true)
+      
+      if (nextAnnouncement) {
+        setCurrentAnnouncementId(nextAnnouncement.id)
+      } else {
+        setCurrentAnnouncementId(null)
+        setIsAnnouncementVisible(false)
+      }
+    }
   }
-
+  
+  // Delete an announcement
   const deleteAnnouncement = (id: string) => {
-    setAnnouncements(prev => prev.filter(announcement => announcement.id !== id))
+    setAnnouncements(prev => prev.filter(a => a.id !== id))
+    
+    // If deleting current announcement, find new current
+    if (id === currentAnnouncementId) {
+      const nextAnnouncement = announcements
+        .find(a => a.id !== id && a.active === true)
+      
+      if (nextAnnouncement) {
+        setCurrentAnnouncementId(nextAnnouncement.id)
+      } else {
+        setCurrentAnnouncementId(null)
+        setIsAnnouncementVisible(false)
+      }
+    }
   }
-
-  // Get the current announcement to display
-  const currentAnnouncement = announcements.find(announcement => {
-    // Check if the announcement is active
-    if (!announcement.active) return false;
-    
-    const now = new Date()
-    
-    // Check start date if exists
-    if (announcement.startDate) {
-      const startDate = new Date(announcement.startDate)
-      if (now < startDate) return false
-    }
-    
-    // Check end date if exists
-    if (announcement.endDate) {
-      const endDate = new Date(announcement.endDate)
-      if (now > endDate) return false
-    }
-    
-    return true
-  }) || null
-
+  
   return (
     <AnnouncementContext.Provider 
       value={{
         announcements,
         currentAnnouncement,
+        isAnnouncementVisible,
+        setAnnouncementVisible: setIsAnnouncementVisible,
         addAnnouncement,
         updateAnnouncement,
-        deleteAnnouncement,
-        isAnnouncementVisible,
-        setAnnouncementVisible
+        deleteAnnouncement
       }}
     >
       {children}
@@ -107,7 +119,7 @@ export function AnnouncementProvider({ children }: { children: React.ReactNode }
 export const useAnnouncement = () => {
   const context = useContext(AnnouncementContext)
   if (context === undefined) {
-    throw new Error("useAnnouncement must be used within an AnnouncementProvider")
+    throw new Error('useAnnouncement must be used within an AnnouncementProvider')
   }
   return context
 }

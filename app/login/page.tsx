@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { Eye, EyeOff, Loader2 } from "lucide-react"
+import { Eye, EyeOff, Loader2, Mail, Phone } from "lucide-react"
 
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
@@ -11,12 +11,19 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { CountryCodeSelect } from "@/components/ui/country-code-select"
 
 export default function LoginPage() {
+  const [loginMethod, setLoginMethod] = useState<"email" | "phone">("email")
   const [email, setEmail] = useState("")
+  const [phoneNumber, setPhoneNumber] = useState("")
+  const [countryCode, setCountryCode] = useState("+977") // Default to Nepal
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState("")
   
   const { login } = useAuth()
   const { toast } = useToast()
@@ -27,9 +34,23 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setError("")
     
     try {
-      const success = await login(email, password)
+      // Determine identifier based on login method
+      const identifier = loginMethod === "email" 
+        ? email 
+        : `${countryCode}${phoneNumber.startsWith('0') ? phoneNumber.substring(1) : phoneNumber}`;
+      
+      if (!identifier || !password) {
+        setError(loginMethod === "email" 
+          ? "Please enter your email and password" 
+          : "Please enter your phone number and password");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      const success = await login(identifier, password)
       
       if (success) {
         toast({
@@ -41,18 +62,12 @@ export default function LoginPage() {
         router.push(fromPath)
         router.refresh() // Force refresh to ensure auth state is updated
       } else {
-        toast({
-          title: "Login failed",
-          description: "Invalid email or password. Please try again.",
-          variant: "destructive"
-        })
+        setError(loginMethod === "email" 
+          ? "Invalid email or password" 
+          : "Invalid phone number or password");
       }
-    } catch (error) {
-      toast({
-        title: "Login error",
-        description: "Something went wrong during login. Please try again.",
-        variant: "destructive"
-      })
+    } catch (error: any) {
+      setError(error.message || "Something went wrong during login. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
@@ -64,22 +79,70 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Login to your account</CardTitle>
           <CardDescription>
-            Enter your email and password to access your account
+            Sign in to access your account
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="name@example.com"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
+            <Tabs 
+              defaultValue="email" 
+              value={loginMethod}
+              onValueChange={(value) => setLoginMethod(value as "email" | "phone")}
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="email" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  <span>Email</span>
+                </TabsTrigger>
+                <TabsTrigger value="phone" className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  <span>Phone</span>
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="email" className="mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="phone" className="mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <div className="flex gap-2">
+                    <div className="flex-shrink-0">
+                      <CountryCodeSelect 
+                        value={countryCode} 
+                        onChange={setCountryCode} 
+                      />
+                    </div>
+                    <Input
+                      id="phoneNumber"
+                      type="tel"
+                      placeholder="98XXXXXXXX"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      className="flex-grow"
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+            
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
@@ -95,7 +158,6 @@ export default function LoginPage() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -124,8 +186,11 @@ export default function LoginPage() {
               className="w-full"
               disabled={isSubmitting}
             >
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                "Sign In"
+              )}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               Don't have an account?{" "}
