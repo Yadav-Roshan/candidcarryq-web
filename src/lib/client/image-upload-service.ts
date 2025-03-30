@@ -6,7 +6,11 @@ import { CldUploadWidget } from "next-cloudinary";
 /**
  * Get a signature for authenticated Cloudinary uploads
  */
-export async function getUploadSignature(productId?: string): Promise<{
+export async function getUploadSignature(
+  productId?: string,
+  purpose?: string,
+  orderId?: string // Add orderId parameter
+): Promise<{
   signature: string;
   timestamp: number;
   cloudName: string;
@@ -34,7 +38,7 @@ export async function getUploadSignature(productId?: string): Promise<{
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ productId }),
+        body: JSON.stringify({ productId, purpose, orderId }), // Include orderId in request
         credentials: "include",
         cache: "no-store",
       });
@@ -76,12 +80,13 @@ export async function getUploadSignature(productId?: string): Promise<{
  */
 export async function uploadProductImage(
   file: File,
-  productId?: string
+  productId?: string,
+  purpose?: string
 ): Promise<{ url: string; publicId: string }> {
   try {
     // Get upload signature
     const { signature, timestamp, cloudName, apiKey, folder, uploadPreset } =
-      await getUploadSignature(productId);
+      await getUploadSignature(productId, purpose);
 
     // Create form data for the upload
     const formData = new FormData();
@@ -136,9 +141,13 @@ export interface UploadWidgetConfig {
 /**
  * Hook-like function to configure widget options with signature
  */
-export async function getUploadWidgetOptions(productId?: string) {
+export async function getUploadWidgetOptions(
+  productId?: string,
+  purpose?: string,
+  orderId?: string // Add orderId parameter
+) {
   const { signature, timestamp, cloudName, apiKey, folder, uploadPreset } =
-    await getUploadSignature(productId);
+    await getUploadSignature(productId, purpose, orderId);
 
   return {
     cloudName,

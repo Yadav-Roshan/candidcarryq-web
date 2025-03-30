@@ -167,6 +167,16 @@ const user = {
     const token = getToken();
     if (!token) throw new Error("Not authenticated");
 
+    // Add validation for phone number
+    if (
+      userData.phoneNumber &&
+      typeof userData.phoneNumber === "string" &&
+      !userData.phoneNumber.startsWith("+")
+    ) {
+      // Add a plus sign if missing (to comply with international format)
+      userData.phoneNumber = `+${userData.phoneNumber}`;
+    }
+
     const response = await fetch("/api/user/profile", {
       method: "PUT",
       headers: {

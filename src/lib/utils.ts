@@ -5,15 +5,24 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatPrice(price: number): string {
-  return new Intl.NumberFormat("en-NP", {
+// Format number as NPR currency
+export function formatNPR(amount: number): string {
+  return new Intl.NumberFormat("ne-NP", {
     style: "currency",
     currency: "NPR",
-  }).format(price);
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
-export function formatNPR(amount: number): string {
-  return `Rs. ${amount.toLocaleString()}`;
+// Generic price formatter (can be used with different currencies)
+export function formatPrice(amount: number, currency = "NPR"): string {
+  return new Intl.NumberFormat("en-NP", {
+    style: "currency",
+    currency: currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
 export function formatDate(date: Date): string {

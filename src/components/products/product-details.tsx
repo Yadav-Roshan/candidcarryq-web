@@ -21,6 +21,8 @@ import { useCart } from "@/contexts/cart-context";
 import { useWishlist } from "@/contexts/wishlist-context";
 import { formatPrice } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/auth-context";
+import { useRouter } from "next/navigation";
 
 interface ProductDetailsProps {
   product: {
@@ -54,6 +56,8 @@ export function ProductDetails({ product }: ProductDetailsProps) {
   const [selectedSize, setSelectedSize] = useState(product.sizes?.[0] || "");
 
   const { addToCart } = useCart();
+  const { user } = useAuth();
+  const router = useRouter();
   const {
     isItemInWishlist,
     addItem: addToWishlist,
@@ -69,6 +73,21 @@ export function ProductDetails({ product }: ProductDetailsProps) {
 
   const handleAddToCart = () => {
     if (!isInStock) return;
+
+    // Check if user is authenticated
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to add items to your cart",
+        variant: "destructive",
+      });
+
+      // Save current URL to return after login
+      router.push(
+        `/login?from=${encodeURIComponent(window.location.pathname)}`
+      );
+      return;
+    }
 
     // Fix: Pass product object and quantity as separate arguments
     // instead of embedding quantity inside the product object

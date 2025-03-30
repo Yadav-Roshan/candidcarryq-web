@@ -1,19 +1,22 @@
-import { Product } from "@/contexts/cart-context"
-import { formatPrice } from "@/lib/utils"
-import { Separator } from "@/components/ui/separator"
+import { Separator } from "@/components/ui/separator";
+import { formatNPR } from "@/lib/utils";
+import Image from "next/image";
+
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  salePrice?: number;
+  quantity: number;
+  image?: string;
+}
 
 interface CheckoutSummaryProps {
-  cartItems: {
-    id: string
-    name: string
-    price: number
-    quantity: number
-    image: string
-  }[]
-  subtotal: number
-  tax: number
-  shipping: number
-  total: number
+  cartItems: CartItem[];
+  subtotal: number;
+  tax: number;
+  shipping: number;
+  total: number;
 }
 
 export default function CheckoutSummary({
@@ -24,48 +27,73 @@ export default function CheckoutSummary({
   total,
 }: CheckoutSummaryProps) {
   return (
-    <div className="rounded-lg border p-6 sticky top-6">
-      <h3 className="text-lg font-semibold">Order Summary</h3>
-      
-      <div className="mt-4 space-y-4">
-        {cartItems.map((item) => (
-          <div key={item.id} className="flex justify-between gap-2 text-sm">
-            <div className="flex gap-2">
-              <span>{item.quantity} ×</span>
-              <span className="truncate max-w-[180px]">{item.name}</span>
+    <div>
+      <div className="p-6">
+        <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
+
+        <div className="space-y-4">
+          {cartItems.map((item) => (
+            <div key={item.id} className="flex items-center gap-4">
+              <div className="h-16 w-16 rounded bg-muted relative overflow-hidden flex-shrink-0">
+                {item.image ? (
+                  <Image
+                    src={item.image}
+                    alt={item.name}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-muted flex items-center justify-center text-muted-foreground">
+                    No image
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{item.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  Qty: {item.quantity}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="font-medium">
+                  {formatNPR((item.salePrice || item.price) * item.quantity)}
+                </p>
+                {item.salePrice && (
+                  <p className="text-sm text-muted-foreground line-through">
+                    {formatNPR(item.price * item.quantity)}
+                  </p>
+                )}
+              </div>
             </div>
-            <span>${(item.price * item.quantity).toFixed(2)}</span>
+          ))}
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className="p-6">
+        <div className="space-y-1.5">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Subtotal</span>
+            <span>{formatNPR(subtotal)}</span>
           </div>
-        ))}
-      </div>
-      
-      <Separator className="my-4" />
-      
-      <div className="space-y-2 text-sm">
-        <div className="flex justify-between">
-          <span>Subtotal</span>
-          <span>${subtotal.toFixed(2)}</span>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Shipping</span>
+            <span>{shipping === 0 ? "Free" : formatNPR(shipping)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Tax (13%)</span>
+            <span>{formatNPR(tax)}</span>
+          </div>
         </div>
-        <div className="flex justify-between">
-          <span>Shipping</span>
-          <span>${shipping.toFixed(2)}</span>
+
+        <Separator className="my-4" />
+
+        <div className="flex justify-between font-medium text-lg">
+          <span>Total</span>
+          <span>{formatNPR(total)}</span>
         </div>
-        <div className="flex justify-between">
-          <span>Tax</span>
-          <span>${tax.toFixed(2)}</span>
-        </div>
-      </div>
-      
-      <Separator className="my-4" />
-      
-      <div className="flex justify-between font-medium">
-        <span>Total</span>
-        <span>${total.toFixed(2)}</span>
-      </div>
-      
-      <div className="mt-6 text-center text-xs text-muted-foreground">
-        <p>All transactions are secure and encrypted</p>
       </div>
     </div>
-  )
+  );
 }
