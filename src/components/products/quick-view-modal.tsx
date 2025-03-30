@@ -141,7 +141,6 @@ export default function QuickViewModal({
               <CartButton
                 product={product}
                 disabled={isOutOfStock}
-                showQuantity
                 className="w-full"
               />
 

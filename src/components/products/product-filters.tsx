@@ -24,28 +24,28 @@ export default function ProductFilters() {
 
   // State for local filters before applying
   const [localCategory, setLocalCategory] = useState(
-    searchParams.get("category") || "all"
+    searchParams?.get("category") || "all"
   );
 
   const [localPriceRange, setLocalPriceRange] = useState<number[]>([
-    Number(searchParams.get("minPrice")) || filterOptions.minPrice,
-    Number(searchParams.get("maxPrice")) || filterOptions.maxPrice,
+    Number(searchParams?.get("minPrice")) || filterOptions.minPrice,
+    Number(searchParams?.get("maxPrice")) || filterOptions.maxPrice,
   ]);
 
   const [localColors, setLocalColors] = useState<string[]>(
-    searchParams.get("colors")?.split(",").filter(Boolean) || []
+    searchParams?.get("colors")?.split(",").filter(Boolean) || []
   );
 
   const [localMaterials, setLocalMaterials] = useState<string[]>(
-    searchParams.get("materials")?.split(",").filter(Boolean) || []
+    searchParams?.get("materials")?.split(",").filter(Boolean) || []
   );
 
   // Update price range when filter options change
   useEffect(() => {
-    if (!searchParams.has("minPrice")) {
+    if (!searchParams?.has("minPrice")) {
       setLocalPriceRange((prev) => [filterOptions.minPrice, prev[1]]);
     }
-    if (!searchParams.has("maxPrice")) {
+    if (!searchParams?.has("maxPrice")) {
       setLocalPriceRange((prev) => [prev[0], filterOptions.maxPrice]);
     }
   }, [filterOptions.minPrice, filterOptions.maxPrice, searchParams]);
@@ -56,7 +56,7 @@ export default function ProductFilters() {
   // Apply filters to the URL
   const applyFilters = () => {
     // Create a new URLSearchParams object
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString());
 
     // Update category parameter
     if (localCategory && localCategory !== "all") {
@@ -109,7 +109,7 @@ export default function ProductFilters() {
 
     // Reset the URL - either clear all params or just keep non-filter params
     // For simplicity, we'll just navigate to the base path
-    router.push(pathname);
+    router.push(pathname || "/products");
 
     // Close the filter sheet after resetting
     setIsOpen(false);

@@ -107,7 +107,9 @@ export function ProductEditForm({
       // Set the first image as main image for the form - now handled in useEffect
       image: "",
       colors: product?.colors || [],
-      sizes: product?.sizes || [],
+      sizes: Array.isArray((product as any)?.sizes)
+        ? (product as any).sizes
+        : [], // Fix for missing sizes property
       warranty: product?.warranty || "", // Add warranty field
       returnPolicy: product?.returnPolicy || "", // Add return policy field
     },
@@ -350,7 +352,9 @@ export function ProductEditForm({
           capacity: product.capacity || "",
           stock: product.stock || 0,
           colors: product.colors || [],
-          sizes: product.sizes || [],
+          sizes: Array.isArray((product as any).sizes)
+            ? (product as any).sizes
+            : [], // Fix for missing sizes property
           warranty: product.warranty || "",
           returnPolicy: product.returnPolicy || "",
           // Don't set the image here, it's handled in another effect
@@ -653,8 +657,9 @@ export function ProductEditForm({
                           <CldUploadWidget
                             options={uploadOptions}
                             onUpload={() => setIsUploading(true)}
-                            onComplete={() => setIsUploading(false)}
+                            onClose={() => setIsUploading(false)}
                             onSuccess={(result) => {
+                              setIsUploading(false);
                               if (result?.info) {
                                 handleImageUpload(
                                   result.info as CloudinaryUploadResult

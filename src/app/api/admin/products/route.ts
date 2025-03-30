@@ -2,8 +2,33 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/product.model";
 import { authenticate, isAdmin } from "@/middleware/auth.middleware";
-import { mockProducts } from "@/lib/api-mock-data";
 import { z } from "zod";
+import { Document } from "mongoose";
+
+// Define a ProductDocument interface for proper typing
+interface ProductDocument extends Document {
+  _id: any;
+  name: string;
+  price: number;
+  image: string;
+  description: string;
+  category: string;
+  salePrice?: number;
+  rating?: number;
+  reviewCount?: number;
+  stock: number;
+  featured: boolean;
+  publishedDate?: Date;
+  images?: string[];
+  imagePublicIds?: string[];
+  material?: string;
+  dimensions?: string;
+  weight?: string;
+  capacity?: string;
+  fullDescription?: string;
+  warranty?: string;
+  returnPolicy?: string;
+}
 
 // Schema for creating product
 const productSchema = z.object({
@@ -55,7 +80,9 @@ export async function GET(request: NextRequest) {
     // Try to connect to MongoDB
     try {
       await connectToDatabase();
-      const products = await Product.find(query).sort({ publishedDate: -1 });
+      const products = (await Product.find(query).sort({
+        publishedDate: -1,
+      })) as ProductDocument[];
 
       return NextResponse.json({
         products: products.map((product) => ({
@@ -77,22 +104,10 @@ export async function GET(request: NextRequest) {
     } catch (dbError) {
       console.error("Database connection error:", dbError);
 
-      // Fall back to mock data
-      let filteredProducts = [...mockProducts];
-
-      if (category) {
-        filteredProducts = filteredProducts.filter(
-          (p) => p.category?.toLowerCase() === category.toLowerCase()
-        );
-      }
-
-      if (featured !== undefined) {
-        filteredProducts = filteredProducts.filter(
-          (p) => p.isFeatured === featured
-        );
-      }
-
-      return NextResponse.json({ products: filteredProducts });
+      return NextResponse.json(
+        { message: "Database Server error" },
+        { status: 500 }
+      );
     }
   } catch (error) {
     console.error("Error fetching products:", error);
@@ -136,8 +151,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create product
-    const product = await Product.create(validationResult.data);
+    // Create product with proper type annotation
+    const product = (await Product.create(
+      validationResult.data
+    )) as ProductDocument;
 
     return NextResponse.json(
       {

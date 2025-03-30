@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ShoppingCart } from "lucide-react";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { useCart } from "@/contexts/cart-context";
-import { Product } from "@/lib/client/product-service";
+import { Product } from "@/contexts/cart-context";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
@@ -48,16 +48,14 @@ export function CartButton({
         return;
       }
 
-      // Wait for the addToCart operation to complete
-      const success = await addToCart(product, 1);
+      // Call addToCart without checking its return value directly
+      await addToCart(product, 1);
 
-      // Only show success toast if the operation was successful
-      if (success) {
-        toast({
-          title: "Added to cart",
-          description: `${product.name} has been added to your cart`,
-        });
-      }
+      // Show success toast after the operation completes
+      toast({
+        title: "Added to cart",
+        description: `${product.name} has been added to your cart`,
+      });
     } catch (error) {
       console.error("Error adding to cart:", error);
       toast({

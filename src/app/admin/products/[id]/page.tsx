@@ -24,7 +24,8 @@ import {
 } from "@/lib/client/product-detail-service";
 
 export default function ProductDetailPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const productId = (params?.id as string) || "";
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,11 +36,11 @@ export default function ProductDetailPage() {
   // Load product data
   useEffect(() => {
     async function loadProduct() {
-      if (!id) return;
+      if (!productId) return;
 
       try {
         setIsLoading(true);
-        const productData = await fetchProductById(id.toString());
+        const productData = await fetchProductById(productId.toString());
         console.log("PRODUCT DATA: ", productData);
 
         // Add diagnostic logging
@@ -75,11 +76,11 @@ export default function ProductDetailPage() {
     }
 
     loadProduct();
-  }, [id, toast]);
+  }, [productId, toast]);
 
   // Handle form submission
   const handleSubmit = async (data: Partial<ProductDetail>) => {
-    if (!id) return;
+    if (!productId) return;
 
     try {
       setIsSubmitting(true);
@@ -97,7 +98,7 @@ export default function ProductDetailPage() {
         return;
       }
 
-      const result = await updateProduct(id.toString(), data);
+      const result = await updateProduct(productId.toString(), data);
 
       toast({
         title: "Product updated",
@@ -123,10 +124,10 @@ export default function ProductDetailPage() {
 
   // Handle product deletion
   const handleDelete = async () => {
-    if (!id) return;
+    if (!productId) return;
 
     try {
-      await deleteProduct(id.toString());
+      await deleteProduct(productId.toString());
       toast({
         title: "Product deleted",
         description: "Product has been successfully deleted",

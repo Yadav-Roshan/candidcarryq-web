@@ -3,6 +3,23 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/product.model";
 import { authenticate, isAdmin } from "@/middleware/auth.middleware";
 import { z } from "zod";
+import { Document } from "mongoose";
+
+// Define a ProductDocument interface for proper typing
+interface ProductDocument extends Document {
+  _id: any;
+  name: string;
+  description: string;
+  price: number;
+  salePrice?: number;
+  image: string;
+  category: string;
+  rating?: number;
+  reviewCount?: number;
+  stock: number;
+  featured?: boolean;
+  publishedDate?: Date;
+}
 
 // Schema for creating product
 const productSchema = z.object({
@@ -24,101 +41,100 @@ const productSchema = z.object({
   stock: z.number().int().nonnegative("Stock must be a non-negative integer"),
 });
 
-// GET - Get all products (public)
+// GET - Fetch products with filtering
 export async function GET(request: NextRequest) {
   try {
-    // Get query parameters
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "12");
-    const category = searchParams.get("category");
-    const sort = searchParams.get("sort") || "newest";
-    const featured = searchParams.get("featured") === "true";
-    const minPrice = searchParams.get("minPrice")
-      ? parseInt(searchParams.get("minPrice") || "0")
+    // Parse URL parameters
+    const url = new URL(request.url);
+    const category = url.searchParams.get("category");
+    const featured = url.searchParams.get("featured") === "true";
+    const search = url.searchParams.get("search");
+    const sort = url.searchParams.get("sort") || "-publishedDate"; // Default sort by newest
+    const minPrice = url.searchParams.get("minPrice")
+      ? parseInt(url.searchParams.get("minPrice") || "0")
       : undefined;
-    const maxPrice = searchParams.get("maxPrice")
-      ? parseInt(searchParams.get("maxPrice") || "100000")
+    const maxPrice = url.searchParams.get("maxPrice")
+      ? parseInt(url.searchParams.get("maxPrice") || "0")
       : undefined;
+    const page = parseInt(url.searchParams.get("page") || "1");
+    const limit = parseInt(url.searchParams.get("limit") || "12");
 
-    await connectToDatabase();
-
-    // Build query
-    const query: any = {};
-
-    if (category) {
-      query.category = category;
-    }
-
-    if (featured) {
-      query.featured = true;
-    }
-
-    if (minPrice !== undefined || maxPrice !== undefined) {
-      query.price = {};
-      if (minPrice !== undefined) query.price.$gte = minPrice;
-      if (maxPrice !== undefined) query.price.$lte = maxPrice;
-    }
-
-    // Determine sort order
-    let sortOption = {};
-    switch (sort) {
-      case "price-low":
-        sortOption = { price: 1 };
-        break;
-      case "price-high":
-        sortOption = { price: -1 };
-        break;
-      case "name-asc":
-        sortOption = { name: 1 };
-        break;
-      case "name-desc":
-        sortOption = { name: -1 };
-        break;
-      default:
-        sortOption = { createdAt: -1 }; // newest first
-    }
-
-    // Calculate pagination
+    // Skip value for pagination
     const skip = (page - 1) * limit;
 
-    // Execute query
-    const products = await Product.find(query)
-      .sort(sortOption)
-      .skip(skip)
-      .limit(limit);
+    // Try database connection
+    try {
+      await connectToDatabase();
 
-    // Get total count for pagination
-    const total = await Product.countDocuments(query);
+      // Build query based on filters
+      let query: any = {};
 
-    // Instead of falling back to mock data, just return what we have (even if empty)
-    return NextResponse.json({
-      products: products.map((product) => ({
+      if (category) {
+        query.category = category;
+      }
+
+      if (featured) {
+        query.featured = true;
+      }
+
+      // Handle search
+      if (search) {
+        query.$or = [
+          { name: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+          { category: { $regex: search, $options: "i" } },
+        ];
+      }
+
+      // Handle price range
+      if (minPrice !== undefined || maxPrice !== undefined) {
+        query.price = {};
+        if (minPrice !== undefined) query.price.$gte = minPrice;
+        if (maxPrice !== undefined) query.price.$lte = maxPrice;
+      }
+
+      // Count total matching products for pagination info
+      const total = await Product.countDocuments(query);
+
+      // Execute query with pagination and sorting
+      const products = (await Product.find(query)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)) as ProductDocument[];
+
+      // Format products for response
+      const formattedProducts = products.map((product) => ({
         id: product._id.toString(),
         name: product.name,
         description: product.description,
         price: product.price,
-        salePrice: product.salePrice || undefined,
-        category: product.category,
+        salePrice: product.salePrice || null,
         image: product.image,
-        rating: product.rating || undefined,
-        reviewCount: product.reviewCount || undefined,
+        category: product.category,
+        rating: product.rating || 0,
+        reviewCount: product.reviewCount || 0,
         stock: product.stock || 0,
-      })),
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
-    });
+      }));
+
+      // Calculate pagination info
+      const totalPages = Math.ceil(total / limit);
+
+      return NextResponse.json({
+        products: formattedProducts,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+        },
+      });
+    } catch (dbError) {
+      console.error("Database connection error:", dbError);
+      return NextResponse.json({ message: "Server error" }, { status: 500 });
+    }
   } catch (error) {
     console.error("Error fetching products:", error);
-    // Return empty array instead of mock data on error
-    return NextResponse.json({
-      products: [],
-      pagination: { page: 1, limit: 12, total: 0, pages: 0 },
-    });
+    return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }
 
@@ -130,13 +146,18 @@ export async function POST(request: NextRequest) {
     // Authentication middleware
     const authResult = await authenticate(request);
     if (authResult.status !== 200) {
-      return authResult;
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status }
+      );
     }
 
     // Admin check
-    const adminCheckResult = await isAdmin(request, authResult.user);
-    if (adminCheckResult.status !== 200) {
-      return adminCheckResult;
+    if (!isAdmin(authResult.user)) {
+      return NextResponse.json(
+        { message: "Access denied - Admin only" },
+        { status: 403 }
+      );
     }
 
     // Parse and validate request body

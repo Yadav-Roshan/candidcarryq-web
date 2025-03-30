@@ -14,6 +14,7 @@ export interface ProductDetail {
   images?: string[];
   imagePublicIds?: string[];
   colors?: string[];
+  sizes?: string[];
   material?: string;
   dimensions?: string;
   weight?: string;

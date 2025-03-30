@@ -2,7 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/product.model";
 import { authenticate, isAdmin } from "@/middleware/auth.middleware";
-import { mockProducts } from "@/lib/api-mock-data";
+import { Document } from "mongoose"; // Import Document type from mongoose
+
+// Define a minimal interface for Product document properties
+interface ProductDocument extends Document {
+  _id: any;
+  name: string;
+  price: number;
+  image: string;
+  description: string;
+  category: string;
+  salePrice?: number;
+  rating?: number;
+  reviewCount?: number;
+  stock: number;
+  featured: boolean;
+}
 
 // GET endpoint to fetch featured products
 export async function GET(request: NextRequest) {
@@ -12,7 +27,9 @@ export async function GET(request: NextRequest) {
 
     try {
       await connectToDatabase();
-      const featuredProducts = await Product.find({ featured: true });
+      const featuredProducts = (await Product.find({
+        featured: true,
+      })) as ProductDocument[];
 
       return NextResponse.json(
         featuredProducts.map((product) => ({
@@ -31,10 +48,6 @@ export async function GET(request: NextRequest) {
       );
     } catch (dbError) {
       console.error("Database connection error:", dbError);
-
-      // Fall back to mock data
-      const featured = mockProducts.filter((p) => p.featured).slice(0, 4);
-      return NextResponse.json(featured);
     }
   } catch (error) {
     console.error("Error fetching featured products:", error);
@@ -46,14 +59,20 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     // Authentication check
-    const user = await authenticate(request);
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status }
+      );
     }
 
     // Admin check
-    if (!isAdmin(user)) {
-      return NextResponse.json({ message: "Access denied" }, { status: 403 });
+    if (!isAdmin(authResult.user)) {
+      return NextResponse.json(
+        { message: "Access denied - Admin only" },
+        { status: 403 }
+      );
     }
 
     // Parse body

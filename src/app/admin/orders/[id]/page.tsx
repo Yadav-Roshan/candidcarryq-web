@@ -112,7 +112,7 @@ export default function AdminOrderDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [viewPaymentProof, setViewPaymentProof] = useState(false);
-  const orderId = params.id as string;
+  const orderId = (params?.id as string) || ""; // Add null check with optional chaining
   const [note, setNote] = useState("");
   const [stockAdjustmentWarning, setStockAdjustmentWarning] = useState(false);
   const [stockData, setStockData] = useState<Record<string, number>>({});

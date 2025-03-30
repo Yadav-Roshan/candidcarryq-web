@@ -16,8 +16,11 @@ export interface WishlistItem {
   price: number;
   image: string;
   category?: string;
-  salePrice?: number;
+  salePrice?: number | null;
   stock?: number; // Keep as optional, but handle defaults elsewhere
+  rating?: number;
+  reviewCount?: number;
+  description?: string;
 }
 
 interface WishlistContextType {

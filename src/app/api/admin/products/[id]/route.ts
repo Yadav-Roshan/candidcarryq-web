@@ -4,6 +4,33 @@ import Product from "@/models/product.model";
 import { authenticate, isAdmin } from "@/middleware/auth.middleware";
 import { z } from "zod";
 import { deleteImage, deleteMultipleImages } from "@/lib/cloudinary";
+import { Document } from "mongoose";
+
+// Define a ProductDocument interface for proper typing
+interface ProductDocument extends Document {
+  _id: any;
+  name: string;
+  description: string;
+  fullDescription?: string;
+  price: number;
+  salePrice?: number;
+  category: string;
+  image: string;
+  images?: string[];
+  imagePublicIds?: string[];
+  colors?: string[];
+  sizes?: string[];
+  material?: string;
+  dimensions?: string;
+  weight?: string;
+  capacity?: string;
+  rating?: number;
+  reviewCount?: number;
+  stock: number;
+  featured: boolean;
+  warranty?: string;
+  returnPolicy?: string;
+}
 
 // Schema for updating product
 const updateProductSchema = z.object({
@@ -46,8 +73,9 @@ const updateProductSchema = z.object({
 // GET - Get single product (admin only)
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } | Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     await connectToDatabase();
 
@@ -68,11 +96,7 @@ export async function GET(
       );
     }
 
-    // Resolve params if it's a Promise
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const id = resolvedParams.id;
-
-    const product = await Product.findById(id);
+    const product = (await Product.findById(id)) as ProductDocument;
 
     if (!product) {
       return NextResponse.json(
@@ -110,7 +134,7 @@ export async function GET(
 
     return NextResponse.json({ product: productData });
   } catch (error) {
-    console.error(`Error fetching product ${params.id}:`, error);
+    console.error(`Error fetching product ${id}:`, error);
     return NextResponse.json(
       { message: "Error fetching product" },
       { status: 500 }
@@ -121,7 +145,7 @@ export async function GET(
 // PUT - Update product (admin only)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } | Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();
@@ -144,8 +168,7 @@ export async function PUT(
     }
 
     // Resolve params if it's a Promise
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const id = resolvedParams.id;
+    const { id } = await params;
 
     // Parse and validate request body
     const body = await request.json();
@@ -162,7 +185,7 @@ export async function PUT(
     }
 
     // Get existing product for image cleanup
-    const existingProduct = await Product.findById(id);
+    const existingProduct = (await Product.findById(id)) as ProductDocument;
     if (!existingProduct) {
       return NextResponse.json(
         { message: "Product not found" },
@@ -173,7 +196,8 @@ export async function PUT(
     // Handle image deletion if needed
     if (
       validationResult.data.images &&
-      existingProduct.imagePublicIds?.length > 0
+      existingProduct.imagePublicIds &&
+      existingProduct.imagePublicIds.length > 0
     ) {
       const oldPublicIds = existingProduct.imagePublicIds;
       const newPublicIds = validationResult.data.imagePublicIds || [];
@@ -196,9 +220,9 @@ export async function PUT(
     };
 
     // Update the product
-    const updatedProduct = await Product.findByIdAndUpdate(id, updateData, {
+    const updatedProduct = (await Product.findByIdAndUpdate(id, updateData, {
       new: true,
-    });
+    })) as ProductDocument;
 
     if (!updatedProduct) {
       return NextResponse.json(
@@ -243,7 +267,7 @@ export async function PUT(
 // DELETE - Delete product (admin only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } | Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();
@@ -265,12 +289,10 @@ export async function DELETE(
       );
     }
 
-    // Resolve params if it's a Promise
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const id = resolvedParams.id;
+    const { id } = await params;
 
     // Find the product
-    const product = await Product.findById(id);
+    const product = (await Product.findById(id)) as ProductDocument;
     if (!product) {
       return NextResponse.json(
         { message: "Product not found" },

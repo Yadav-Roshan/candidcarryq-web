@@ -1,124 +1,86 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Order from "@/models/order.model";
-import { authenticate, isAdmin } from "@/middleware/auth.middleware";
-import { z } from "zod";
-import mongoose from "mongoose";
+import { authenticate } from "@/middleware/auth.middleware";
 
-// Schema for updating order status
-const updateOrderSchema = z.object({
-  orderStatus: z
-    .enum(["pending", "processing", "shipped", "delivered", "cancelled"])
-    .optional(),
-  paymentStatus: z
-    .enum(["pending", "verified", "rejected", "completed", "failed"])
-    .optional(),
-  trackingNumber: z.string().optional(),
-  delivererName: z.string().optional(),
-  delivererPhone: z.string().optional(),
-  deliveryOtp: z.string().optional(),
-  statusHistoryEntry: z
-    .object({
-      status: z.string(),
-      timestamp: z.string(),
-      note: z.string().optional(),
-    })
-    .optional(),
-});
-
-// Function to generate a unique tracking number
-function generateTrackingNumber(): string {
-  // Format: TRK-YYYYMMDD-XXXXX where XXXXX is a random number
-  const now = new Date();
-  const dateStr =
-    now.getFullYear().toString() +
-    (now.getMonth() + 1).toString().padStart(2, "0") +
-    now.getDate().toString().padStart(2, "0");
-
-  // Generate a random 5-digit number
-  const randomPart = Math.floor(10000 + Math.random() * 90000);
-
-  return `TRK-${dateStr}-${randomPart}`;
-}
-
-// Generate a random 6-digit OTP
-function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+// Define interface for OrderItem
+interface OrderItem {
+  product: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image: string;
+  color?: string;
+  size?: string;
 }
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } | Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    // Authentication middleware
-    const authResult = await authenticate(request);
-    if (authResult.status !== 200) {
-      return NextResponse.json(
-        { message: authResult.message || "Unauthorized" },
-        { status: authResult.status }
-      );
-    }
-
-    const userId = authResult.user.id;
-
-    // Resolve params if it's a Promise
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const orderId = resolvedParams.id;
-
-    // Validate MongoDB ObjectId
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return NextResponse.json(
-        { message: "Invalid order ID format" },
-        { status: 400 }
-      );
-    }
-
     await connectToDatabase();
 
-    // Find the order that belongs to the user
-    const order = await Order.findOne({
-      _id: orderId,
-      user: userId,
-    }).lean();
-
-    if (!order) {
+    // Authentication middleware
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200 || !authResult.user) {
       return NextResponse.json(
-        { message: "Order not found or access denied" },
-        { status: 404 }
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status || 401 }
       );
     }
 
-    // Format the order for the client
+    const user = authResult.user;
+    const orderId = id;
+
+    // Find the order
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return NextResponse.json({ message: "Order not found" }, { status: 404 });
+    }
+
+    // Check if the order belongs to the user
+    if (!user || order.user.toString() !== user.id) {
+      return NextResponse.json(
+        { message: "Access denied - This order does not belong to you" },
+        { status: 403 }
+      );
+    }
+
+    // Format order data for client
     const formattedOrder = {
-      id: order._id.toString(),
+      _id: order._id.toString(),
       orderNumber: order.orderNumber,
-      date: order.createdAt,
-      status: order.orderStatus,
-      paymentStatus: order.paymentStatus,
-      items: order.items.map((item: any) => ({
-        id: item.product.toString(),
+      items: order.items.map((item: OrderItem) => ({
+        product: item.product,
         name: item.name,
         price: item.price,
         quantity: item.quantity,
-        image: item.image || null,
-        color: item.color || null,
-        size: item.size || null,
+        image: item.image,
+        color: item.color,
+        size: item.size,
       })),
+      totalAmount: order.totalAmount,
       shippingAddress: order.shippingAddress,
       paymentMethod: order.paymentMethod,
       transactionRef: order.transactionRef,
       paymentProofImage: order.paymentProofImage,
-      total: order.totalAmount,
-      shippingCost: order.shippingCost || 0,
-      taxAmount: order.taxAmount || 0,
-      discount: order.discount || 0, // Include discount
-      promoCode: order.promoCode || null, // Include promocode
+      paymentStatus: order.paymentStatus,
+      orderStatus: order.orderStatus,
+      shippingCost: order.shippingCost,
+      taxAmount: order.taxAmount,
+      discount: order.discount,
+      promoCode: order.promoCode,
+      promoCodeDiscount: order.promoCodeDiscount,
+      trackingNumber: order.trackingNumber,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
       statusHistory: order.statusHistory || [],
-      trackingNumber: order.trackingNumber || null,
-      deliveryOtp: order.deliveryOtp || null,
-      delivererName: order.delivererName || null,
-      delivererPhone: order.delivererPhone || null,
+      delivererName: order.delivererName,
+      delivererPhone: order.delivererPhone,
+      deliveryOtp: order.deliveryOtp,
     };
 
     return NextResponse.json({ order: formattedOrder });
@@ -131,128 +93,73 @@ export async function GET(
   }
 }
 
+// PUT: Update order - for customer delivery confirmation
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } | Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    // Resolve params if it's a Promise
-    const resolvedParams = params instanceof Promise ? await params : params;
-
-    // Ensure we have the id parameter
-    if (!resolvedParams?.id) {
-      return NextResponse.json(
-        { message: "Order ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const id = resolvedParams.id; // Now safely access the id
-
-    await connectToDatabase();
-
     // Authentication middleware
     const authResult = await authenticate(request);
-    if (authResult.status !== 200) {
-      return authResult;
+    if (authResult.status !== 200 || !authResult.user) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status || 401 }
+      );
     }
 
     const user = authResult.user;
 
-    // Check if user is admin
-    if (user.role !== "admin") {
-      return NextResponse.json(
-        { message: "Not authorized. Admin only." },
-        { status: 403 }
-      );
-    }
+    const orderId = id;
+    const { deliveryOtp } = await request.json();
 
-    // Parse and validate request body
-    const body = await request.json();
-    const validationResult = updateOrderSchema.safeParse(body);
+    await connectToDatabase();
 
-    if (!validationResult.success) {
-      return NextResponse.json(
-        {
-          message: "Validation error",
-          errors: validationResult.error.errors,
-        },
-        { status: 400 }
-      );
-    }
-
-    const updateData = validationResult.data;
-
-    // Handle status history updates
-    let updateOperation: any = { $set: {} };
-
-    // Check if order status is changing to shipped
-    let isMarkingAsShipped = false;
-    if (updateData.orderStatus === "shipped") {
-      isMarkingAsShipped = true;
-
-      // Get the current order to check its status
-      const currentOrder = await Order.findById(id);
-      if (!currentOrder) {
-        return NextResponse.json(
-          { message: "Order not found" },
-          { status: 404 }
-        );
-      }
-
-      // Only generate tracking number if the order is not already shipped
-      if (currentOrder.orderStatus !== "shipped") {
-        // Generate a unique tracking number
-        const trackingNumber = generateTrackingNumber();
-        updateOperation.$set.trackingNumber = trackingNumber;
-
-        // Update the note to include the tracking number
-        if (
-          updateData.statusHistoryEntry &&
-          updateData.statusHistoryEntry.note
-        ) {
-          updateData.statusHistoryEntry.note += ` (Tracking #: ${trackingNumber})`;
-        } else if (updateData.statusHistoryEntry) {
-          updateData.statusHistoryEntry.note = `Order shipped with tracking #: ${trackingNumber}`;
-        }
-      }
-    }
-
-    if (updateData.orderStatus) {
-      updateOperation.$set.orderStatus = updateData.orderStatus;
-    }
-
-    if (updateData.paymentStatus) {
-      updateOperation.$set.paymentStatus = updateData.paymentStatus;
-    }
-
-    if (updateData.trackingNumber) {
-      updateOperation.$set.trackingNumber = updateData.trackingNumber;
-    }
-
-    // Add new history entry if provided
-    if (updateData.statusHistoryEntry) {
-      updateOperation.$push = {
-        statusHistory: updateData.statusHistoryEntry,
-      };
-    }
-
-    // Update order
-    const order = await Order.findByIdAndUpdate(params.id, updateOperation, {
-      new: true,
-      runValidators: true,
-    });
+    // Find order and ensure it belongs to the user
+    const order = await Order.findById(orderId);
 
     if (!order) {
       return NextResponse.json({ message: "Order not found" }, { status: 404 });
     }
 
-    return NextResponse.json({
-      message: "Order updated successfully",
-      order,
+    // Check if the order belongs to the user
+    if (!user || order.user.toString() !== user.id) {
+      return NextResponse.json(
+        { message: "Access denied - This order does not belong to you" },
+        { status: 403 }
+      );
+    }
+
+    // Check if order is in shipped status
+    if (order.orderStatus !== "shipped") {
+      return NextResponse.json(
+        { message: "Order is not in shipped status" },
+        { status: 400 }
+      );
+    }
+
+    // Verify OTP
+    if (!deliveryOtp || deliveryOtp !== order.deliveryOtp) {
+      return NextResponse.json({ message: "Invalid OTP" }, { status: 400 });
+    }
+
+    // Update order status to delivered
+    order.orderStatus = "delivered";
+    order.statusHistory.unshift({
+      status: "delivered",
+      timestamp: new Date(),
+      note: "Delivery confirmed by customer",
     });
+
+    await order.save();
+
+    return NextResponse.json({ message: "Delivery confirmed successfully" });
   } catch (error) {
-    console.error("Order API error:", error);
-    return NextResponse.json({ message: "Server error" }, { status: 500 });
+    console.error("Error confirming delivery:", error);
+    return NextResponse.json(
+      { message: "Error confirming delivery" },
+      { status: 500 }
+    );
   }
 }

@@ -126,14 +126,18 @@ const productSchema = new Schema<IProduct>(
   { timestamps: true }
 );
 
-// Add a pre-find middleware to ensure these fields exist on all documents
-productSchema.pre("findOne", function () {
-  this.projection = {
-    ...this.projection,
-    warranty: { $ifNull: ["$warranty", ""] },
-    returnPolicy: { $ifNull: ["$returnPolicy", ""] },
-  };
+// Replace the pre-find middleware with a virtual getter that ensures default values
+productSchema.virtual("warrantyWithDefault").get(function () {
+  return this.warranty || "";
 });
+
+productSchema.virtual("returnPolicyWithDefault").get(function () {
+  return this.returnPolicy || "";
+});
+
+// Make sure virtuals are included in object and JSON output
+productSchema.set("toObject", { virtuals: true });
+productSchema.set("toJSON", { virtuals: true });
 
 // Create or get the model
 const Product: Model<IProduct> =

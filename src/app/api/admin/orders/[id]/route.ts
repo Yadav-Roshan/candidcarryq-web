@@ -38,7 +38,7 @@ function generateOTP(): string {
 // GET - Get order details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } | Promise<{ id: string }> } // Update type to handle Promise
+  { params }: { params: Promise<{ id: string }> } // Fixed type annotation
 ) {
   try {
     // Authentication middleware
@@ -58,9 +58,7 @@ export async function GET(
       );
     }
 
-    // Resolve params if it's a Promise
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const id = resolvedParams.id;
+    const { id } = await params;
 
     // Validate MongoDB ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -127,7 +125,7 @@ export async function GET(
 // PUT - Update order status (Admin only)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } | Promise<{ id: string }> } // Update type to handle Promise
+  { params }: { params: Promise<{ id: string }> } // Fixed type annotation
 ) {
   try {
     await connectToDatabase();
@@ -169,9 +167,7 @@ export async function PUT(
       );
     }
 
-    // Resolve params if it's a Promise
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const id = resolvedParams.id;
+    const { id } = await params;
 
     // Get the current order status
     const currentOrder = await Order.findById(id);
@@ -287,12 +283,10 @@ export async function PUT(
       }
     }
 
-    // Update order using the resolved id
-    const updatedOrder = await Order.findByIdAndUpdate(
-      id, // Use resolved id instead of params.id
-      updateOperation,
-      { new: true }
-    );
+    // Update order using the id param
+    const updatedOrder = await Order.findByIdAndUpdate(id, updateOperation, {
+      new: true,
+    });
 
     // If payment is being verified, reduce stock quantities
     if (isVerifyingPayment) {

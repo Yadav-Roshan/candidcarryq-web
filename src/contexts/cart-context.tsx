@@ -28,6 +28,8 @@ export interface Product {
   weight?: string;
   capacity?: string;
   fullDescription?: string;
+  featured?: boolean;
+  stock?: number;
 }
 
 interface CartItem extends Product {

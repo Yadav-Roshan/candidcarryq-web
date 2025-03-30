@@ -1,55 +1,62 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { ProductCard } from "@/components/products/product-card"
-import { mockProducts } from "@/lib/api-mock-data"
+import { useState, useEffect } from "react";
+import { ProductCard } from "@/components/products/product-card";
+import { mockProducts } from "@/lib/api-mock-data";
 
 interface ProductRecommendationsProps {
-  productId: string
-  category?: string
+  productId: string;
+  category?: string;
 }
 
-export function ProductRecommendations({ productId, category }: ProductRecommendationsProps) {
-  const [recommendations, setRecommendations] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  
+export function ProductRecommendations({
+  productId,
+  category,
+}: ProductRecommendationsProps) {
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     const fetchRecommendations = async () => {
-      setIsLoading(true)
+      setIsLoading(true);
       try {
         // Try to fetch from server with real API
-        const response = await fetch(`/api/products/recommendations?id=${productId}&category=${category || ''}`)
-        
+        const response = await fetch(
+          `/api/products/recommendations?id=${productId}&category=${
+            category || ""
+          }`
+        );
+
         if (response.ok) {
-          const data = await response.json()
-          setRecommendations(data)
+          const data = await response.json();
+          setRecommendations(data);
         } else {
           // If server fails, use mock data
           // Filter out the current product and get products in the same category
           const filtered = mockProducts
-            .filter(p => p.id !== productId)
-            .filter(p => !category || p.category === category)
-            .slice(0, 4)
-          
-          setRecommendations(filtered)
+            .filter((p) => p.id !== productId)
+            .filter((p) => !category || p.category === category)
+            .slice(0, 4);
+
+          setRecommendations(filtered);
         }
       } catch (error) {
-        console.error("Error fetching recommendations:", error)
+        console.error("Error fetching recommendations:", error);
         // Fallback to mock data
         const filtered = mockProducts
-          .filter(p => p.id !== productId)
-          .filter(p => !category || p.category === category)
-          .slice(0, 4)
-        
-        setRecommendations(filtered)
+          .filter((p) => p.id !== productId)
+          .filter((p) => !category || p.category === category)
+          .slice(0, 4);
+
+        setRecommendations(filtered);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
-    
-    fetchRecommendations()
-  }, [productId, category])
-  
+    };
+
+    fetchRecommendations();
+  }, [productId, category]);
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -61,18 +68,18 @@ export function ProductRecommendations({ productId, category }: ProductRecommend
           </div>
         ))}
       </div>
-    )
+    );
   }
-  
+
   if (recommendations.length === 0) {
-    return <p>No related products found.</p>
+    return <p>No related products found.</p>;
   }
-  
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {recommendations.map(product => (
+      {recommendations.map((product) => (
         <ProductCard key={product.id} {...product} />
       ))}
     </div>
-  )
+  );
 }

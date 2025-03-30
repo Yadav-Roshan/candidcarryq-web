@@ -15,7 +15,7 @@ interface WishlistButtonProps {
   productPrice: number;
   productImage: string;
   productCategory?: string;
-  productSalePrice?: number;
+  productSalePrice?: number | null;
   productStock?: number;
   size?: "sm" | "md" | "lg";
   className?: string;

@@ -19,7 +19,7 @@ export function ProductsPageClient() {
     let result = [...products];
 
     // Category filter
-    const category = searchParams.get("category");
+    const category = searchParams?.get("category");
     if (category && category !== "all") {
       result = result.filter(
         (p) => p.category?.toLowerCase() === category.toLowerCase()
@@ -27,40 +27,40 @@ export function ProductsPageClient() {
     }
 
     // Price range filter
-    const minPrice = searchParams.get("minPrice");
+    const minPrice = searchParams?.get("minPrice");
     if (minPrice) {
       result = result.filter((p) => p.price >= Number(minPrice));
     }
 
-    const maxPrice = searchParams.get("maxPrice");
+    const maxPrice = searchParams?.get("maxPrice");
     if (maxPrice) {
       result = result.filter((p) => p.price <= Number(maxPrice));
     }
 
     // Colors filter
-    const colors = searchParams.get("colors")?.split(",");
+    const colors = searchParams?.get("colors")?.split(",");
     if (colors && colors.length > 0) {
       result = result.filter((p) => {
         if (!p.colors || p.colors.length === 0) return false;
         return colors.some((color) =>
-          p.colors.some((c) => c.toLowerCase().includes(color.toLowerCase()))
+          p.colors?.some((c) => c.toLowerCase().includes(color.toLowerCase()))
         );
       });
     }
 
     // Materials filter
-    const materials = searchParams.get("materials")?.split(",");
+    const materials = searchParams?.get("materials")?.split(",");
     if (materials && materials.length > 0) {
       result = result.filter((p) => {
         if (!p.material) return false;
         return materials.some((material) =>
-          p.material.toLowerCase().includes(material.toLowerCase())
+          (p.material?.toLowerCase() || "").includes(material.toLowerCase())
         );
       });
     }
 
     // Sort filter
-    const sort = searchParams.get("sort");
+    const sort = searchParams?.get("sort");
     if (sort) {
       switch (sort) {
         case "price-low":
@@ -101,7 +101,7 @@ export function ProductsPageClient() {
             price={product.price}
             image={product.image}
             category={product.category}
-            salePrice={product.salePrice}
+            salePrice={product.salePrice ?? undefined}
             rating={product.rating}
             reviewCount={product.reviewCount}
             stock={product.stock}

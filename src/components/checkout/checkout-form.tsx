@@ -4,8 +4,35 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatPrice } from "@/lib/utils";
 
+// Define interface for checkout item
+interface CheckoutItem {
+  name: string;
+  quantity: number;
+  price: number;
+  id?: string;
+  image?: string;
+}
+
+// Define interface for checkout data
+interface CheckoutData {
+  shippingAddress: {
+    phoneNumber?: string;
+    buildingName?: string;
+    locality?: string;
+    wardNo?: string;
+    postalCode?: string;
+    district?: string;
+    province?: string;
+    country?: string;
+    landmark?: string;
+  };
+  paymentMethod: string;
+  items: CheckoutItem[];
+  totalAmount: number;
+}
+
 const Checkout = () => {
-  const [checkoutData, setCheckoutData] = useState({
+  const [checkoutData, setCheckoutData] = useState<CheckoutData>({
     shippingAddress: {},
     paymentMethod: "",
     items: [],

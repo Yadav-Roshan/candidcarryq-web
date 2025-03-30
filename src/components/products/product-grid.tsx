@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Product } from "@/lib/client/product-service";
+import { Product } from "@/contexts/cart-context";
 import { ProductCard } from "@/components/products/product-card";
 import { NoProducts } from "@/components/products/no-products"; // Changed from NoResults
 

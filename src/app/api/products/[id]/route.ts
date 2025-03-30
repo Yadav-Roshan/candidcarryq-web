@@ -5,6 +5,34 @@ import { authenticate, isAdmin } from "@/middleware/auth.middleware";
 import { z } from "zod";
 import mongoose from "mongoose";
 import { deleteImage, deleteMultipleImages } from "@/lib/cloudinary";
+import { Document } from "mongoose";
+
+// Define a ProductDocument interface for proper typing
+interface ProductDocument extends Document {
+  _id: any;
+  name: string;
+  price: number;
+  image: string;
+  description: string;
+  category: string;
+  salePrice?: number;
+  rating?: number;
+  reviewCount?: number;
+  stock: number;
+  featured: boolean;
+  images?: string[];
+  imagePublicIds?: string[];
+  material?: string;
+  dimensions?: string;
+  weight?: string;
+  capacity?: string;
+  colors?: string[];
+  sizes?: string[];
+  fullDescription?: string;
+  warranty?: string;
+  returnPolicy?: string;
+  publishedDate?: Date;
+}
 
 // Update the product schema validation for updates
 const updateProductSchema = z.object({
@@ -50,12 +78,11 @@ function isValidObjectId(id: string): boolean {
 // GET - Get single product (public)
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } | Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     // Resolve params if it's a Promise
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const { id } = resolvedParams;
 
     await connectToDatabase();
 
@@ -68,7 +95,7 @@ export async function GET(
     }
 
     // Find product in database
-    const product = await Product.findById(id);
+    const product = (await Product.findById(id)) as ProductDocument;
 
     if (!product) {
       // Don't fall back to mock data, just return a 404
@@ -108,7 +135,7 @@ export async function GET(
   } catch (error) {
     console.error(
       `Error fetching product ${
-        params instanceof Promise ? await params.then((p) => p.id) : params.id
+        params instanceof Promise ? await params.then((p) => p.id) : id
       }:`,
       error
     );
@@ -122,12 +149,11 @@ export async function GET(
 // PUT - Update product (admin only)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } | Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Resolve params if it's a Promise
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const { id } = resolvedParams;
+    const { id } = await params;
 
     // Ensure id is valid
     if (!id) {
@@ -140,12 +166,15 @@ export async function PUT(
     await connectToDatabase();
 
     // Authentication middleware
-    const user = await authenticate(request);
-
-    // Check if authentication was successful
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200 || !authResult.user) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status || 401 }
+      );
     }
+
+    const user = authResult.user;
 
     // Admin check - log the user role to debug
     console.log("User role:", user.role);
@@ -168,7 +197,7 @@ export async function PUT(
     }
 
     // Get the product to check if we need to delete old images
-    const existingProduct = await Product.findById(id);
+    const existingProduct = (await Product.findById(id)) as ProductDocument;
     if (!existingProduct) {
       return NextResponse.json(
         { message: "Product not found" },
@@ -179,7 +208,8 @@ export async function PUT(
     // If we're updating images and have old image public IDs, delete those from Cloudinary
     if (
       validationResult.data.images &&
-      existingProduct.imagePublicIds?.length > 0
+      existingProduct.imagePublicIds &&
+      existingProduct.imagePublicIds.length > 0
     ) {
       const oldPublicIds = existingProduct.imagePublicIds;
       const newPublicIds = validationResult.data.imagePublicIds || [];
@@ -201,10 +231,10 @@ export async function PUT(
       ...validationResult.data,
     };
 
-    const product = await Product.findByIdAndUpdate(id, updateData, {
+    const product = (await Product.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
-    });
+    })) as ProductDocument;
 
     if (!product) {
       return NextResponse.json(
@@ -250,12 +280,11 @@ export async function PUT(
 // DELETE - Delete product (admin only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } | Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Resolve params if it's a Promise
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const { id } = resolvedParams;
+    const { id } = await params;
 
     // Ensure id is valid
     if (!id) {
@@ -268,18 +297,23 @@ export async function DELETE(
     await connectToDatabase();
 
     // Authentication middleware
-    const user = await authenticate(request);
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const authResult = await authenticate(request);
+    if (authResult.status !== 200 || !authResult.user) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status || 401 }
+      );
     }
 
+    const user = authResult.user;
+
     // Admin check
-    if (!isAdmin(user)) {
+    if (user.role !== "admin") {
       return NextResponse.json({ message: "Access denied" }, { status: 403 });
     }
 
     // Find the product to get image IDs for deletion
-    const product = await Product.findById(id);
+    const product = (await Product.findById(id)) as ProductDocument;
     if (!product) {
       return NextResponse.json(
         { message: "Product not found" },
