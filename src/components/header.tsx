@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Menu, ShoppingCart, User, Search, Sun, Moon, Home, Heart, Package, Grid } from "lucide-react"
@@ -22,9 +22,39 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState("")
   const { theme, setTheme } = useTheme()
   const router = useRouter()
-  const { totalItems } = useCart()
-  const { totalItems: wishlistItems } = useWishlist()
   const { user } = useAuth() // Get user from auth context
+  
+  // Add mounting state to prevent hydration mismatch
+  const [mounted, setMounted] = useState(false)
+  const { totalItems: cartItems } = useCart()
+  const { totalItems: wishlistItems } = useWishlist()
+  
+  // Set mounted to true after component mounts
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+  
+  // Return null on server or during first render on client
+  if (!mounted) {
+    // You can render a placeholder with the same structure to avoid layout shift
+    return (
+      <header className="sticky top-0 z-50 w-full border-b bg-black text-white">
+        <div className="container flex h-16 items-center justify-between">
+          {/* Logo placeholder */}
+          <div className="flex items-center">
+            <span className="text-xl font-bold">CandidWear</span>
+          </div>
+          
+          {/* Placeholder for buttons */}
+          <div className="flex items-center space-x-2">
+            <div className="h-9 w-9"></div>
+            <div className="h-9 w-9"></div>
+            <div className="h-9 w-9"></div>
+          </div>
+        </div>
+      </header>
+    )
+  }
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,7 +65,7 @@ export default function Header() {
   }
   
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background">
+    <header className="sticky top-0 z-50 w-full border-b bg-black text-white">
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <div className="flex items-center">
@@ -60,26 +90,26 @@ export default function Header() {
 
         {/* Desktop navigation - Complete horizontal menu */}
         <nav className="hidden md:flex items-center space-x-6">
-          <Link href="/" className="text-sm font-medium hover:text-primary flex items-center gap-1">
+          <Link href="/" className="text-sm font-medium text-gray-300 hover:text-white flex items-center gap-1 transition-colors">
             <Home className="h-4 w-4" />
             <span>Home</span>
           </Link>
-          <Link href="/products" className="text-sm font-medium hover:text-primary flex items-center gap-1">
+          <Link href="/products" className="text-sm font-medium text-gray-300 hover:text-white flex items-center gap-1 transition-colors">
             <Package className="h-4 w-4" />
             <span>Products</span>
           </Link>
-          <Link href="/categories" className="text-sm font-medium hover:text-primary flex items-center gap-1">
+          <Link href="/categories" className="text-sm font-medium text-gray-300 hover:text-white flex items-center gap-1 transition-colors">
             <Grid className="h-4 w-4" />
             <span>Categories</span>
           </Link>
-          <Link href="/account" className="text-sm font-medium hover:text-primary flex items-center gap-1">
+          <Link href="/account" className="text-sm font-medium text-gray-300 hover:text-white flex items-center gap-1 transition-colors">
             <User className="h-4 w-4" />
             <span>Account</span>
           </Link>
           
           {/* Admin link in desktop nav - Only for admins */}
           {user?.role === 'admin' && (
-            <Link href="/admin" className="text-sm font-medium text-primary hover:text-primary/80">
+            <Link href="/admin" className="text-sm font-medium text-primary hover:text-primary-foreground transition-colors">
               Admin Dashboard
             </Link>
           )}
@@ -93,6 +123,7 @@ export default function Header() {
             size="icon" 
             aria-label="Toggle Theme"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="text-gray-300 hover:text-white hover:bg-gray-800"
           >
             {theme === "dark" ? (
               <Sun className="h-5 w-5" />
@@ -102,9 +133,9 @@ export default function Header() {
             <span className="sr-only">Toggle Theme</span>
           </Button>
 
-          {/* Wishlist with Item Count - Fixed nesting issue */}
-          <Link href="/wishlist">
-            <Button variant="ghost" size="icon" aria-label="Wishlist" className="relative">
+          {/* Wishlist with Item Count */}
+          <Link href="/wishlist" passHref>
+            <Button variant="ghost" size="icon" aria-label="Wishlist" className="relative text-gray-300 hover:text-white hover:bg-gray-800">
               <Heart className="h-5 w-5" />
               {wishlistItems > 0 && (
                 <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
@@ -116,12 +147,12 @@ export default function Header() {
           </Link>
 
           {/* Cart with Item Count */}
-          <Link href="/cart">
-            <Button variant="ghost" size="icon" aria-label="Cart" className="relative">
+          <Link href="/cart" passHref>
+            <Button variant="ghost" size="icon" aria-label="Cart" className="relative text-gray-300 hover:text-white hover:bg-gray-800">
               <ShoppingCart className="h-5 w-5" />
-              {totalItems > 0 && (
+              {cartItems > 0 && (
                 <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                  {totalItems}
+                  {cartItems}
                 </Badge>
               )}
               <span className="sr-only">Cart</span>
@@ -131,7 +162,7 @@ export default function Header() {
           {/* Mobile Menu Button - Only visible on mobile */}
           <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Menu" className="md:hidden">
+              <Button variant="ghost" size="icon" aria-label="Menu" className="md:hidden text-gray-300 hover:text-white hover:bg-gray-800">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Menu</span>
               </Button>
@@ -141,42 +172,42 @@ export default function Header() {
                 <Link 
                   href="/" 
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-2 text-lg font-medium"
+                  className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
                 >
                   <Home className="h-5 w-5" /> Home
                 </Link>
                 <Link 
                   href="/products" 
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-2 text-lg font-medium"
+                  className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
                 >
                   <Package className="h-5 w-5" /> Products
                 </Link>
                 <Link 
                   href="/categories" 
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-2 text-lg font-medium"
+                  className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
                 >
                   <Grid className="h-5 w-5" /> Categories
                 </Link>
                 <Link 
                   href="/cart" 
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-2 text-lg font-medium"
+                  className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
                 >
                   <ShoppingCart className="h-5 w-5" /> Cart
                 </Link>
                 <Link 
                   href="/wishlist" 
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-2 text-lg font-medium"
+                  className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
                 >
                   <Heart className="h-5 w-5" /> Wishlist
                 </Link>
                 <Link 
                   href="/account" 
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-2 text-lg font-medium"
+                  className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
                 >
                   <User className="h-5 w-5" /> Account
                 </Link>

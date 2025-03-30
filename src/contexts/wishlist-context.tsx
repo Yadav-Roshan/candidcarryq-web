@@ -6,7 +6,9 @@ export interface WishlistItem {
   id: string
   name: string
   price: number
-  image: string
+  image?: string
+  category?: string
+  salePrice?: number
 }
 
 interface WishlistContextType {
@@ -26,6 +28,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   
   // Load wishlist from localStorage on component mount
   useEffect(() => {
+    setMounted(true)
     const storedWishlist = localStorage.getItem('wishlist')
     if (storedWishlist) {
       try {
@@ -35,7 +38,6 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         setItems([])
       }
     }
-    setMounted(true)
   }, [])
   
   // Save wishlist to localStorage whenever it changes
@@ -97,7 +99,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 export const useWishlist = () => {
   const context = useContext(WishlistContext)
   if (context === undefined) {
-    throw new Error('useWishlist must be used within a WishlistProvider')
+    throw new Error("useWishlist must be used within a WishlistProvider")
   }
   return context
 }

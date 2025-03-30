@@ -1,7 +1,8 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
-import apiClient from "@/lib/api-client"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/components/ui/use-toast"
 
 interface Address {
   buildingName?: string;
@@ -47,26 +48,57 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// Token handling utilities
+const getToken = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('authToken');
+  }
+  return null;
+};
+
+const setToken = (token: string) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('authToken', token);
+  }
+};
+
+const clearToken = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('authToken');
+  }
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
 
   // Check if user is already logged in
   useEffect(() => {
     const checkAuth = async () => {
       setIsLoading(true)
       try {
-        const token = localStorage.getItem('authToken')
+        const token = getToken()
         
         if (token) {
           // If we have a token, fetch the user profile
-          const userData = await apiClient.user.getProfile()
-          setUser(userData)
+          const response = await fetch('/api/user/profile', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setUser(data.user);
+          } else {
+            clearToken();
+          }
         }
       } catch (error) {
         console.error("Auth check failed:", error)
-        localStorage.removeItem('authToken')
+        clearToken()
         setUser(null)
       } finally {
         setIsLoading(false)
@@ -82,14 +114,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
 
     try {
-      const response = await apiClient.auth.login(identifier, password)
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ identifier, password }),
+      });
       
-      if (response.token && response.user) {
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Login failed');
+      }
+      
+      const data = await response.json();
+      
+      if (data.token && data.user) {
         // Store token
-        apiClient.auth.setToken(response.token)
+        setToken(data.token)
         
         // Store user data
-        setUser(response.user)
+        setUser(data.user)
+        
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+        })
         
         return true
       } else {
@@ -104,20 +154,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Register functionality with address support
+  // Register functionality
   const register = async (userData: RegisterUserData): Promise<boolean> => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await apiClient.auth.register(userData)
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
       
-      if (response.token && response.user) {
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Registration failed');
+      }
+      
+      const data = await response.json();
+      
+      if (data.token && data.user) {
         // Store token
-        apiClient.auth.setToken(response.token)
+        setToken(data.token)
         
         // Store user data
-        setUser(response.user)
+        setUser(data.user)
+        
+        toast({
+          title: "Registration successful",
+          description: "Your account has been created!",
+        })
         
         return true
       } else {
@@ -138,11 +206,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
 
     try {
-      const response = await apiClient.user.updateProfile(userData)
+      const token = getToken();
+      if (!token) throw new Error('Not authenticated');
       
-      if (response.user) {
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          clearToken();
+          throw new Error('Session expired');
+        }
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update profile');
+      }
+      
+      const data = await response.json();
+      
+      if (data.user) {
         // Update user data in state
-        setUser(prevUser => prevUser ? {...prevUser, ...response.user} : null)
+        setUser(prevUser => prevUser ? {...prevUser, ...data.user} : null)
+        
+        toast({
+          title: "Profile updated",
+          description: "Your profile has been updated successfully",
+        })
+        
         return true
       } else {
         setError('Failed to update profile')
@@ -162,13 +257,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
 
     try {
-      const response = await apiClient.user.updateAddress(address)
+      const token = getToken();
+      if (!token) throw new Error('Not authenticated');
       
-      if (response.user) {
+      const response = await fetch('/api/user/address', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ address }),
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          clearToken();
+          throw new Error('Session expired');
+        }
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update address');
+      }
+      
+      const data = await response.json();
+      
+      if (data.user) {
         // Update user data in state with new address
         setUser(prevUser => 
-          prevUser ? {...prevUser, address: response.user.address} : null
+          prevUser ? {...prevUser, address: data.user.address} : null
         )
+        
+        toast({
+          title: "Address updated",
+          description: "Your address has been updated successfully",
+        })
+        
         return true
       } else {
         setError('Failed to update address')
@@ -185,10 +307,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Logout function
   const logout = () => {
     // Clear token
-    apiClient.auth.clearToken()
+    clearToken()
     
     // Clear user state
     setUser(null)
+    
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully",
+    })
   }
 
   return (

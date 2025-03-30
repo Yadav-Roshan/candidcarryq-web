@@ -1,6 +1,18 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+// Define address schema as a subdocument
+const AddressSchema = new Schema({
+  buildingName: String,
+  locality: String,
+  wardNo: String,
+  postalCode: String,
+  district: String,
+  province: String,
+  country: String,
+  landmark: String,
+}, { _id: false });
+
 export interface Address {
   buildingName?: string;
   locality: string;
@@ -68,16 +80,7 @@ const UserSchema = new Schema<IUser>(
       default: 'user',
     },
     avatar: String,
-    address: {
-      buildingName: String,
-      locality: String,
-      wardNo: String,
-      postalCode: String,
-      district: String,
-      province: String,
-      country: { type: String, default: 'Nepal' },
-      landmark: String,
-    },
+    address: AddressSchema,
   },
   {
     timestamps: true,
@@ -110,8 +113,9 @@ UserSchema.set('toJSON', {
   }
 });
 
-// Create indexes for login
-UserSchema.index({ email: 1 });
-UserSchema.index({ phoneNumber: 1 });
+// Remove the duplicate schema index declarations - this was causing the warnings
+// email and phoneNumber are already defined as unique in the schema definition
 
-export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
+const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
+
+export default User;

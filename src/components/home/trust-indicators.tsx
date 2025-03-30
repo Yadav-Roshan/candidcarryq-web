@@ -1,42 +1,30 @@
-import { Truck, CreditCard, ShieldCheck, RotateCcw } from "lucide-react"
-
-const trustItems = [
-  {
-    icon: Truck,
-    title: "Free Shipping",
-    description: "On all orders over NPR 5,000"
-  },
-  {
-    icon: CreditCard,
-    title: "Secure Payments",
-    description: "All major payment methods accepted"
-  },
-  {
-    icon: ShieldCheck,
-    title: "Quality Guarantee",
-    description: "Every product tested and inspected"
-  },
-  {
-    icon: RotateCcw,
-    title: "Easy Returns",
-    description: "30-day money back guarantee"
-  }
-]
+import { Truck, CreditCard, MapPin, Mail } from "lucide-react"
 
 export function TrustIndicators() {
   return (
-    <section className="py-16">
+    <section className="w-full bg-primary/5 py-16">
       <div className="container">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {trustItems.map((item, index) => (
-            <div key={index} className="flex flex-col items-center text-center">
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <item.icon className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-lg font-medium mb-1">{item.title}</h3>
-              <p className="text-sm text-muted-foreground">{item.description}</p>
-            </div>
-          ))}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="flex flex-col items-center text-center p-4">
+            <Truck className="h-10 w-10 mb-3 text-primary" />
+            <h4 className="font-medium text-lg">Free Delivery</h4>
+            <p className="text-sm text-muted-foreground">On orders over NPR 5,000</p>
+          </div>
+          <div className="flex flex-col items-center text-center p-4">
+            <CreditCard className="h-10 w-10 mb-3 text-primary" />
+            <h4 className="font-medium text-lg">Secure Payment</h4>
+            <p className="text-sm text-muted-foreground">100% secure payment</p>
+          </div>
+          <div className="flex flex-col items-center text-center p-4">
+            <MapPin className="h-10 w-10 mb-3 text-primary" />
+            <h4 className="font-medium text-lg">Store Pickup</h4>
+            <p className="text-sm text-muted-foreground">Available at multiple locations</p>
+          </div>
+          <div className="flex flex-col items-center text-center p-4">
+            <Mail className="h-10 w-10 mb-3 text-primary" />
+            <h4 className="font-medium text-lg">24/7 Support</h4>
+            <p className="text-sm text-muted-foreground">Dedicated customer support</p>
+          </div>
         </div>
       </div>
     </section>

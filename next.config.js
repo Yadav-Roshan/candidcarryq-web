@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    serverActions: true, // Enable server actions
+  },
   images: {
     domains: ['images.unsplash.com', 'plus.unsplash.com', 'placehold.co'],
     remotePatterns: [
@@ -24,6 +27,20 @@ const nextConfig = {
         permanent: true,
       }
     ];
+  },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Don't resolve 'fs', 'net', and other Node.js built-ins on the client side
+      config.resolve.fallback = {
+        fs: false,
+        net: false,
+        tls: false,
+        dns: false,
+        child_process: false,
+        perf_hooks: false,
+      };
+    }
+    return config;
   },
 }
 
