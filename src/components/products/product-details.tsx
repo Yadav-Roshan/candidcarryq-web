@@ -192,23 +192,23 @@ export function ProductDetails({ product }: ProductDetailsProps) {
     return stars;
   };
 
-  // Function to get at least 3 images
+  // Function to get unique product images without placeholders
   const getProductImages = () => {
-    // Start with the main product image
-    const allImages = [product.image];
+    // Create a Set to automatically handle duplicates
+    const uniqueImages = new Set<string>();
+
+    // Add the main product image if it exists
+    if (product.image) {
+      uniqueImages.add(product.image);
+    }
 
     // Add additional images if they exist
     if (product.images && product.images.length > 0) {
-      allImages.push(...product.images);
+      product.images.forEach((img) => uniqueImages.add(img));
     }
 
-    // If we still have fewer than 3 images, add placeholders
-    const placeholderCount = Math.max(0, 3 - allImages.length);
-    for (let i = 0; i < placeholderCount; i++) {
-      allImages.push(`https://placehold.co/600x600?text=No+Image+${i + 1}`);
-    }
-
-    return allImages;
+    // Convert back to array
+    return Array.from(uniqueImages);
   };
 
   const allProductImages = getProductImages();
