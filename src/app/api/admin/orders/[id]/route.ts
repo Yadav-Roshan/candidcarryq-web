@@ -75,24 +75,37 @@ export async function GET(
 // PUT - Update order status (Admin only)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } | Promise<{ id: string }> } // Update type to handle Promise
 ) {
   try {
     await connectToDatabase();
 
     // Authentication middleware
-    const user = await authenticate(request);
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const authResult = await authenticate(request);
+    console.log("Auth result:", authResult);
+
+    if (authResult.status !== 200) {
+      return NextResponse.json(
+        { message: authResult.message || "Unauthorized" },
+        { status: authResult.status }
+      );
     }
 
-    // Admin check
-    if (user.role !== "admin") {
-      return NextResponse.json({ message: "Access denied" }, { status: 403 });
+    const user = authResult.user;
+
+    // Admin check with clearer error message
+    if (!isAdmin(user)) {
+      console.error("Access denied - User is not an admin:", user);
+      return NextResponse.json(
+        { message: "Access denied - Admin privileges required" },
+        { status: 403 }
+      );
     }
 
     // Parse and validate request body
     const body = await request.json();
+    console.log("Received update data:", body);
+
     const validationResult = updateOrderSchema.safeParse(body);
 
     if (!validationResult.success) {
@@ -105,8 +118,12 @@ export async function PUT(
       );
     }
 
+    // Resolve params if it's a Promise
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const id = resolvedParams.id;
+
     // Get the current order status
-    const currentOrder = await Order.findById(params.id);
+    const currentOrder = await Order.findById(id);
     if (!currentOrder) {
       return NextResponse.json({ message: "Order not found" }, { status: 404 });
     }
@@ -195,9 +212,9 @@ export async function PUT(
       };
     }
 
-    // Update order
+    // Update order using the resolved id
     const updatedOrder = await Order.findByIdAndUpdate(
-      params.id,
+      id, // Use resolved id instead of params.id
       updateOperation,
       { new: true }
     );

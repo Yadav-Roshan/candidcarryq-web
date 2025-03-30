@@ -29,17 +29,27 @@ export async function authenticate(req: NextRequest) {
   }
 
   const decoded = verifyToken(token);
+  console.log("Decoded token:", decoded);
+
   if (!decoded || typeof decoded !== "object") {
     return { status: 401, message: "Invalid token" };
   }
 
   try {
     await connectToDatabase();
+
+    // Ensure we're requesting all necessary fields, especially role
     const user = await User.findById(decoded.id).select("-password");
 
     if (!user) {
       return { status: 404, message: "User not found" };
     }
+
+    console.log("Authenticated user:", {
+      id: user._id.toString(),
+      role: user.role,
+      email: user.email,
+    });
 
     // Return user object in consistent format
     return {
@@ -48,7 +58,7 @@ export async function authenticate(req: NextRequest) {
         id: user._id.toString(),
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: user.role, // Make sure role is included here
         phoneNumber: user.phoneNumber || undefined,
         avatar: user.avatar || undefined,
         address: user.address || undefined,
@@ -60,12 +70,16 @@ export async function authenticate(req: NextRequest) {
   }
 }
 
-// Refine the isAdmin function to handle different user object formats
+// Update the isAdmin function to be more robust
 export function isAdmin(user: any) {
+  console.log("Checking admin privileges for user:", user);
+
   // Check if user has role property and it equals 'admin'
   if (!user) return false;
 
-  // Handle both object formats (direct property or nested in user property)
-  const role = user.role || user.user?.role;
+  // Handle different object formats
+  const role = user.role || (user.user && user.user.role);
+  console.log("User role:", role);
+
   return role === "admin";
 }

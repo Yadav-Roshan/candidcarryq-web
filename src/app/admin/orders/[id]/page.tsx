@@ -218,7 +218,7 @@ export default function AdminOrderDetailPage() {
     }
   };
 
-  // Modified updateOrderStatus function to include delivery information
+  // Update the updateOrderStatus function to include better error handling
   const updateOrderStatus = async (
     statusType: "paymentStatus" | "orderStatus",
     value: string,
@@ -228,6 +228,11 @@ export default function AdminOrderDetailPage() {
       setIsUpdating(true);
       const token = localStorage.getItem("authToken");
       if (!token) {
+        toast({
+          title: "Authentication Error",
+          description: "Your session has expired. Please log in again.",
+          variant: "destructive",
+        });
         router.push("/login");
         return;
       }
@@ -235,7 +240,7 @@ export default function AdminOrderDetailPage() {
       let updateData: any = {};
       updateData[statusType] = value;
 
-      // FIXED: Create a status history entry to add (not replace)
+      // Create a status history entry to add
       const newStatusEntry = {
         status: value,
         timestamp: new Date().toISOString(),
@@ -273,7 +278,9 @@ export default function AdminOrderDetailPage() {
         updateData.deliveryOtp = deliveryOtp;
       }
 
-      // Change the API endpoint to use the admin route which properly generates OTPs
+      console.log("Updating order with data:", updateData);
+
+      // Use the admin route with better error handling
       const response = await fetch(`/api/admin/orders/${orderId}`, {
         method: "PUT",
         headers: {
@@ -284,8 +291,29 @@ export default function AdminOrderDetailPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update order status");
+        let errorMessage = "Failed to update order status";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          console.error("Error parsing response:", e);
+        }
+
+        if (response.status === 403) {
+          toast({
+            title: "Access Denied",
+            description:
+              "You don't have permission to update order status. Please ensure you have admin privileges.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Update Failed",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -310,14 +338,6 @@ export default function AdminOrderDetailPage() {
       }
     } catch (error) {
       console.error("Error updating order status:", error);
-      toast({
-        title: "Update Failed",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Could not update the order status",
-        variant: "destructive",
-      });
     } finally {
       setIsUpdating(false);
     }
