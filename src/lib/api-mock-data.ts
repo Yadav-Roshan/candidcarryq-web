@@ -14,6 +14,7 @@ export const mockProducts = [
     material: "Water-resistant polyester",
     dimensions: "30 x 45 x 15 cm",
     capacity: "25 liters",
+    isFeatured: true,
   },
   {
     id: "2",
@@ -28,6 +29,7 @@ export const mockProducts = [
     reviewCount: 24,
     material: "Premium vegan leather",
     dimensions: "40 x 30 x 12 cm",
+    isFeatured: false,
   },
   {
     id: "3",
@@ -44,6 +46,7 @@ export const mockProducts = [
     material: "Canvas with leather trim",
     dimensions: "55 x 35 x 25 cm",
     capacity: "40 liters",
+    isFeatured: true,
   },
   {
     id: "4",
@@ -58,6 +61,7 @@ export const mockProducts = [
     reviewCount: 35,
     material: "Genuine leather",
     dimensions: "11 x 9 x 1.5 cm",
+    isFeatured: false,
   },
   {
     id: "5",
@@ -73,6 +77,7 @@ export const mockProducts = [
     material: "Nylon",
     dimensions: "20 x 30 x 10 cm",
     capacity: "7 liters",
+    isFeatured: false,
   },
   {
     id: "6",
@@ -88,5 +93,6 @@ export const mockProducts = [
     material: "Full-grain leather",
     dimensions: "38 x 28 x 10 cm",
     capacity: "15 liters",
+    isFeatured: true,
   },
 ];

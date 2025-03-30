@@ -1,57 +1,150 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import Product from '@/models/product.model';
-import { authenticate } from '@/middleware/auth.middleware';
+import { NextRequest, NextResponse } from "next/server";
+import { connectToDatabase } from "@/lib/mongodb";
+import Product from "@/models/product.model";
+import { authenticate, isAdmin } from "@/middleware/auth.middleware";
+import { mockProducts } from "@/lib/api-mock-data";
+import { z } from "zod";
 
-// GET all products for admin (with pagination)
+// Schema for creating product
+const productSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+  price: z.number().positive("Price must be positive"),
+  salePrice: z
+    .number()
+    .positive("Sale price must be positive")
+    .optional()
+    .nullable(),
+  category: z.string(),
+  image: z.string().url("Main image must be a valid URL"),
+  images: z
+    .array(z.string().url("Image must be a valid URL"))
+    .min(1, "At least one image is required")
+    .max(3, "Maximum 3 images allowed"),
+  imagePublicIds: z.array(z.string()).optional(),
+  colors: z.array(z.string()).optional(),
+  sizes: z.array(z.string()).optional(),
+  material: z.string().optional(),
+  dimensions: z.string().optional(),
+  weight: z.string().optional(),
+  capacity: z.string().optional(),
+  fullDescription: z.string().optional(),
+  featured: z.boolean().optional(),
+  stock: z.number().int().nonnegative("Stock must be a non-negative integer"),
+  publishedDate: z.date().optional(),
+});
+
+// GET - Get all products (public)
 export async function GET(request: NextRequest) {
   try {
-    await connectToDatabase();
-    
-    // Authentication
-    const authResult = await authenticate(request);
-    
-    // Check if authentication returned a NextResponse (error)
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
-    
-    // Admin check
-    if (authResult.user.role !== 'admin') {
-      return NextResponse.json({ message: 'Forbidden - Admin access required' }, { status: 403 });
-    }
-    
-    // Get query parameters
+    // Parse query parameters
     const url = new URL(request.url);
-    const page = parseInt(url.searchParams.get('page') || '1');
-    const limit = parseInt(url.searchParams.get('limit') || '20');
-    const skip = (page - 1) * limit;
-    
-    // Fetch products with pagination
-    const products = await Product.find().skip(skip).limit(limit).sort({ createdAt: -1 });
-    const total = await Product.countDocuments();
-    
-    return NextResponse.json({
-      products: products.map(product => ({
-        id: product._id.toString(),
-        name: product.name,
-        price: product.price,
-        salePrice: product.salePrice,
-        category: product.category,
-        image: product.image,
-        stock: product.stock,
-        featured: product.featured || false,
-        createdAt: product.createdAt,
-      })),
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit)
+    const category = url.searchParams.get("category");
+    const featured = url.searchParams.has("featured")
+      ? url.searchParams.get("featured") === "true"
+      : undefined;
+
+    // Build the query
+    const query: any = {};
+    if (category) query.category = category;
+    if (featured !== undefined) query.featured = featured;
+
+    // Try to connect to MongoDB
+    try {
+      await connectToDatabase();
+      const products = await Product.find(query).sort({ publishedDate: -1 });
+
+      return NextResponse.json({
+        products: products.map((product) => ({
+          id: product._id.toString(),
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          description: product.description,
+          category: product.category,
+          salePrice: product.salePrice,
+          rating: product.rating,
+          reviewCount: product.reviewCount,
+          stock: product.stock,
+          isFeatured: product.featured,
+          publishedDate: product.publishedDate,
+          images: product.images,
+        })),
+      });
+    } catch (dbError) {
+      console.error("Database connection error:", dbError);
+
+      // Fall back to mock data
+      let filteredProducts = [...mockProducts];
+
+      if (category) {
+        filteredProducts = filteredProducts.filter(
+          (p) => p.category?.toLowerCase() === category.toLowerCase()
+        );
       }
-    });
+
+      if (featured !== undefined) {
+        filteredProducts = filteredProducts.filter(
+          (p) => p.isFeatured === featured
+        );
+      }
+
+      return NextResponse.json({ products: filteredProducts });
+    }
   } catch (error) {
-    console.error('Error fetching admin products:', error);
-    return NextResponse.json({ message: 'Server error' }, { status: 500 });
+    console.error("Error fetching products:", error);
+    return NextResponse.json({ message: "Server error" }, { status: 500 });
+  }
+}
+
+// POST - Create new product (admin only)
+export async function POST(request: NextRequest) {
+  try {
+    await connectToDatabase();
+
+    // Authentication middleware
+    const user = await authenticate(request);
+    if (!user) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    // Admin check
+    if (!isAdmin(user)) {
+      return NextResponse.json({ message: "Access denied" }, { status: 403 });
+    }
+
+    // Parse and validate request body
+    const body = await request.json();
+    const validationResult = productSchema.safeParse({
+      ...body,
+      publishedDate: new Date(),
+    });
+
+    if (!validationResult.success) {
+      return NextResponse.json(
+        {
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Create product
+    const product = await Product.create(validationResult.data);
+
+    return NextResponse.json(
+      {
+        message: "Product created successfully",
+        product: {
+          id: product._id.toString(),
+          ...validationResult.data,
+        },
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Error creating product:", error);
+    return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }

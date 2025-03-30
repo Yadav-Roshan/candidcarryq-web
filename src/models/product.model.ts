@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IProduct extends Document {
   name: string;
@@ -7,7 +7,8 @@ export interface IProduct extends Document {
   salePrice?: number;
   category: string;
   image: string;
-  images?: string[];
+  images: string[];
+  imagePublicIds: string[]; // Store Cloudinary public IDs for deletion
   colors?: string[];
   sizes?: string[];
   material?: string;
@@ -15,62 +16,78 @@ export interface IProduct extends Document {
   weight?: string;
   capacity?: string;
   fullDescription?: string;
-  rating?: number;
-  reviewCount?: number;
   featured: boolean;
   stock: number;
-  createdAt: Date;
-  updatedAt: Date;
+  rating: number;
+  reviewCount: number;
+  publishedDate: Date;
+  updatedAt?: Date;
 }
 
-const ProductSchema = new Schema<IProduct>(
+const productSchema = new Schema<IProduct>(
   {
     name: {
       type: String,
-      required: [true, 'Please provide product name'],
+      required: [true, "Product name is required"],
       trim: true,
-      maxlength: [100, 'Name cannot be more than 100 characters'],
+      minlength: [2, "Product name must be at least 2 characters"],
     },
     description: {
       type: String,
-      required: [true, 'Please provide product description'],
-      maxlength: [1000, 'Description cannot be more than 1000 characters'],
+      required: [true, "Product description is required"],
+      minlength: [10, "Description must be at least 10 characters"],
     },
     price: {
       type: Number,
-      required: [true, 'Please provide product price'],
-      min: [0, 'Price must be a positive number'],
+      required: [true, "Price is required"],
+      min: [0, "Price cannot be negative"],
     },
     salePrice: {
       type: Number,
-      min: [0, 'Sale price must be a positive number'],
+      min: [0, "Sale price cannot be negative"],
     },
     category: {
       type: String,
-      required: [true, 'Please provide product category'],
-      trim: true,
+      required: [true, "Category is required"],
+      lowercase: true,
     },
     image: {
       type: String,
-      required: [true, 'Please provide product image'],
+      required: [true, "Main product image is required"],
     },
-    images: [String],
-    colors: [String],
-    sizes: [String],
-    material: String,
-    dimensions: String,
-    weight: String,
-    capacity: String,
-    fullDescription: String,
-    rating: {
-      type: Number,
-      min: [0, 'Rating must be at least 0'],
-      max: [5, 'Rating cannot be more than 5'],
-      default: 0,
+    images: {
+      type: [String],
+      validate: [
+        function (val: string[]) {
+          return val.length >= 1 && val.length <= 3;
+        },
+        "Product must have 1-3 images",
+      ],
     },
-    reviewCount: {
-      type: Number,
-      default: 0,
+    imagePublicIds: {
+      type: [String],
+      default: [],
+    },
+    colors: {
+      type: [String],
+    },
+    sizes: {
+      type: [String],
+    },
+    material: {
+      type: String,
+    },
+    dimensions: {
+      type: String,
+    },
+    weight: {
+      type: String,
+    },
+    capacity: {
+      type: String,
+    },
+    fullDescription: {
+      type: String,
     },
     featured: {
       type: Boolean,
@@ -78,18 +95,29 @@ const ProductSchema = new Schema<IProduct>(
     },
     stock: {
       type: Number,
-      required: [true, 'Please provide product stock'],
-      min: [0, 'Stock must be a positive number'],
+      default: 0,
+      min: [0, "Stock cannot be negative"],
+    },
+    rating: {
+      type: Number,
+      default: 0,
+      min: [0, "Rating cannot be negative"],
+      max: [5, "Rating cannot be more than 5"],
+    },
+    reviewCount: {
+      type: Number,
       default: 0,
     },
+    publishedDate: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// Create indexes for searching
-ProductSchema.index({ name: 'text', description: 'text', category: 'text' });
+// Create or get the model
+const Product: Model<IProduct> =
+  mongoose.models.Product || mongoose.model<IProduct>("Product", productSchema);
 
-export default mongoose.models.Product || 
-  mongoose.model<IProduct>('Product', ProductSchema);
+export default Product;
