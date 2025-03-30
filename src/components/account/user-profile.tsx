@@ -1,42 +1,90 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { User, Mail, Phone } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Label } from "@/components/ui/label"
-import { useToast } from "@/components/ui/use-toast"
-import { useAuth } from "@/contexts/auth-context"
+import { useState, useEffect } from "react";
+import { User, Mail, Phone, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/auth-context";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 export function UserProfile() {
-  const { user } = useAuth()
-  const { toast } = useToast()
-  const [isEditing, setIsEditing] = useState(false)
+  const { user, updateUserProfile } = useAuth();
+  const { toast } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || "",
     email: user?.email || "",
     phoneNumber: user?.phoneNumber || "",
-  })
-  
+  });
+
+  // Update form data when user data changes
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || "",
+        email: user.email || "",
+        phoneNumber: user.phoneNumber || "",
+      });
+    }
+  }, [user]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-  }
-  
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    // In a real app, you would update the user profile through an API
-    toast({
-      title: "Profile updated",
-      description: "Your profile has been updated successfully",
-    })
-    
-    setIsEditing(false)
-  }
-  
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePhoneChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, phoneNumber: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      // Use the updateUserProfile function from auth context
+      const success = await updateUserProfile({
+        name: formData.name,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber || null, // Send null if empty string
+      });
+
+      if (success) {
+        toast({
+          title: "Profile updated",
+          description: "Your profile has been updated successfully",
+        });
+        setIsEditing(false);
+      } else {
+        toast({
+          title: "Update failed",
+          description: "Failed to update your profile. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="grid gap-6">
       <Card>
@@ -55,10 +103,12 @@ export function UserProfile() {
                 </AvatarFallback>
               </Avatar>
               {isEditing && (
-                <Button variant="outline" size="sm">Change Avatar</Button>
+                <Button variant="outline" size="sm">
+                  Change Avatar
+                </Button>
               )}
             </div>
-            
+
             {/* User details */}
             <div className="flex-1">
               <form onSubmit={handleSubmit}>
@@ -66,12 +116,12 @@ export function UserProfile() {
                   <div className="grid gap-2">
                     <Label htmlFor="name">Full Name</Label>
                     {isEditing ? (
-                      <Input 
-                        id="name" 
-                        name="name" 
-                        value={formData.name} 
-                        onChange={handleChange} 
-                        placeholder="Your full name" 
+                      <Input
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        placeholder="Your full name"
                       />
                     ) : (
                       <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/50">
@@ -80,17 +130,17 @@ export function UserProfile() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
                     {isEditing ? (
-                      <Input 
-                        id="email" 
-                        name="email" 
-                        type="email" 
-                        value={formData.email} 
-                        onChange={handleChange} 
-                        placeholder="Your email" 
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        placeholder="Your email"
                       />
                     ) : (
                       <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/50">
@@ -99,41 +149,51 @@ export function UserProfile() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="grid gap-2">
                     <Label htmlFor="phoneNumber">Phone Number</Label>
                     {isEditing ? (
-                      <Input 
-                        id="phoneNumber" 
-                        name="phoneNumber" 
-                        value={formData.phoneNumber} 
-                        onChange={handleChange} 
-                        placeholder="Your phone number" 
+                      <PhoneInput
+                        value={formData.phoneNumber}
+                        onChange={handlePhoneChange}
+                        placeholder="Your phone number"
                       />
                     ) : (
                       <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/50">
                         <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{formData.phoneNumber}</span>
+                        <span>{formData.phoneNumber || "Not provided"}</span>
                       </div>
                     )}
                   </div>
                 </div>
-                
+
                 <div className="mt-6 flex justify-end">
                   {isEditing ? (
                     <>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
+                      <Button
+                        type="button"
+                        variant="outline"
                         onClick={() => setIsEditing(false)}
                         className="mr-2"
+                        disabled={isSubmitting}
                       >
                         Cancel
                       </Button>
-                      <Button type="submit">Save Changes</Button>
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          "Save Changes"
+                        )}
+                      </Button>
                     </>
                   ) : (
-                    <Button type="button" onClick={() => setIsEditing(true)}>Edit Profile</Button>
+                    <Button type="button" onClick={() => setIsEditing(true)}>
+                      Edit Profile
+                    </Button>
                   )}
                 </div>
               </form>
@@ -142,5 +202,5 @@ export function UserProfile() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

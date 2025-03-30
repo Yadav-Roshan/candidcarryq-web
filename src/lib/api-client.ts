@@ -14,6 +14,9 @@ const getToken = () => {
 
 const setToken = (token: string) => {
   if (typeof window !== "undefined") {
+    // Remove any existing token first to avoid stale state
+    localStorage.removeItem("authToken");
+    // Then set the new token
     localStorage.setItem("authToken", token);
   }
 };
