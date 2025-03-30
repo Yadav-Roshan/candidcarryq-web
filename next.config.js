@@ -2,30 +2,32 @@
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    serverActions: true, // Enable server actions
+    serverActions: {
+      allowedOrigins: ["localhost:3000"],
+    }, // Use object format instead of boolean
   },
   images: {
-    domains: ['images.unsplash.com', 'plus.unsplash.com', 'placehold.co'],
+    domains: ["images.unsplash.com", "plus.unsplash.com", "placehold.co"],
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: '**',
-      }
+        protocol: "https",
+        hostname: "**",
+      },
     ],
-    unoptimized: process.env.NODE_ENV === 'development',
+    unoptimized: process.env.NODE_ENV === "development",
   },
   async redirects() {
     return [
       {
-        source: '/shop',
-        destination: '/products',
+        source: "/shop",
+        destination: "/products",
         permanent: true,
       },
       {
-        source: '/shop/:path*',
-        destination: '/products/:path*',
+        source: "/shop/:path*",
+        destination: "/products/:path*",
         permanent: true,
-      }
+      },
     ];
   },
   webpack: (config, { isServer }) => {
@@ -42,6 +44,6 @@ const nextConfig = {
     }
     return config;
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
