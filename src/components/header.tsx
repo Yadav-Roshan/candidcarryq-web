@@ -51,7 +51,7 @@ export default function Header() {
       <header className="w-full bg-background border-b">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center">
-            <span className="text-xl font-bold">CandidCarryq</span>
+            <img src="/logo.png" alt="CandidCarryq Logo" className="h-12" />
           </div>
 
           {/* Placeholder for buttons */}
@@ -68,7 +68,8 @@ export default function Header() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      // router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      router.push(`/products`);
       setSearchQuery("");
     }
   };
@@ -79,7 +80,7 @@ export default function Header() {
         {/* Logo */}
         <div className="flex items-center">
           <Link href="/" className="flex items-center">
-            <span className="text-xl font-bold">CandidCarryq</span>
+            <img src="/logo.png" alt="CandidCarryq Logo" className="h-10" />
           </Link>
         </div>
 
