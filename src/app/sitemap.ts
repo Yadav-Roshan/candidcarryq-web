@@ -1,6 +1,13 @@
 import { MetadataRoute } from 'next'
 import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/product.model";
+import mongoose from "mongoose";
+
+// Define interface for the product document with the fields we need
+interface ProductDocument {
+  _id: mongoose.Types.ObjectId;
+  updatedAt?: Date;
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://candidcarryq.com';
@@ -53,7 +60,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   
   try {
     await connectToDatabase();
-    const products = await Product.find({}, { _id: 1, updatedAt: 1 });
+    const products = await Product.find({}, { _id: 1, updatedAt: 1 }) as ProductDocument[];
     
     productRoutes = products.map(product => ({
       url: `${baseUrl}/products/${product._id.toString()}`,

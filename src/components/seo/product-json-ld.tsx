@@ -26,7 +26,7 @@ export function ProductJsonLd({ product }: { product: Product }) {
       price: product.salePrice || product.price,
       priceValidUntil: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
       itemCondition: "https://schema.org/NewCondition",
-      availability: product.stock > 0 
+      availability: (product.stock ?? 0) > 0 
         ? "https://schema.org/InStock" 
         : "https://schema.org/OutOfStock"
     },

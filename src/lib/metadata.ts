@@ -66,7 +66,7 @@ export function generateMetadata({
   if (product) {
     metadata.openGraph = {
       ...metadata.openGraph,
-      type: "product",
+      type: "website", // Changed from "product" to a valid value
       images: [
         {
           url: product.image,

@@ -4,7 +4,7 @@ import { ProductDetails } from "@/components/products/product-details";
 import { ProductReviews } from "@/components/products/product-reviews";
 import { ProductRecommendations } from "@/components/products/product-recommendations";
 import { getProductById } from "@/lib/api";
-import { generateMetadata } from "@/lib/metadata";
+import { generateMetadata as createMetadata } from "@/lib/metadata";
 import { ProductJsonLd } from "@/components/seo/product-json-ld";
 import {
   Breadcrumb,
@@ -26,14 +26,14 @@ export async function generateMetadata({
   const product = await getProductById(resolvedParams.id);
 
   if (!product) {
-    return generateMetadata({
+    return createMetadata({
       title: "Product Not Found",
       description: "The requested product could not be found",
       noIndex: true,
     });
   }
 
-  return generateMetadata({
+  return createMetadata({
     title: product.name,
     description: product.description || `Shop ${product.name} at CandidCarryq. ${product.category ? `Premium quality ${product.category} with excellent craftsmanship.` : ''}`,
     path: `/products/${product.id}`,
