@@ -4,7 +4,7 @@ const nextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: ["localhost:3000"],
-    }, // Use object format instead of boolean
+    },
   },
   images: {
     domains: ["images.unsplash.com", "plus.unsplash.com", "placehold.co"],
@@ -28,11 +28,22 @@ const nextConfig = {
         destination: "/products/:path*",
         permanent: true,
       },
+      // Add common misspellings or old URLs
+      {
+        source: "/product/:id",
+        destination: "/products/:id",
+        permanent: true,
+      },
+      {
+        source: "/category/:category",
+        destination: "/categories/:category",
+        permanent: true,
+      },
     ];
   },
+  // Add more redirects for common misspellings
   webpack: (config, { isServer }) => {
     if (!isServer) {
-      // Don't resolve 'fs', 'net', and other Node.js built-ins on the client side
       config.resolve.fallback = {
         fs: false,
         net: false,
@@ -44,6 +55,7 @@ const nextConfig = {
     }
     return config;
   },
+  poweredByHeader: false, // Remove X-Powered-By header for security
 };
 
 module.exports = nextConfig;

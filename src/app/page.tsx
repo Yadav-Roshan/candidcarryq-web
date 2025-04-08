@@ -5,6 +5,12 @@ import { TrustIndicators } from "@/components/home/trust-indicators"
 import { NewsletterSubscription } from "@/components/home/newsletter"
 import { ProductCard } from "@/components/products/product-card"
 import { getFeaturedProducts } from "@/lib/api" // Server-side function 
+import { generateMetadata } from "@/lib/metadata";
+
+export const metadata = generateMetadata({
+  title: "Premium Bags and Accessories for Every Lifestyle",
+  description: "Discover our exquisite collection of handbags, backpacks, and travel bags designed for your modern lifestyle. Quality craftsmanship and stylish designs.",
+});
 
 export default async function Home() {
   // This will run only on the server
