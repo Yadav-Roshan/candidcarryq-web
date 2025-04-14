@@ -42,7 +42,8 @@ export default function ProductsPage() {
     async function fetchProducts() {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/admin/products");
+        // Add cache-busting query parameter to prevent caching
+        const response = await fetch("/api/admin/products?timestamp=" + new Date().getTime());
 
         if (!response.ok) {
           throw new Error("Failed to fetch products");

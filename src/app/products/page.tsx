@@ -4,6 +4,9 @@ import { ProductsHeader } from "@/components/products/products-header";
 import { ProductsFilters } from "@/components/products/products-filters";
 import { getAllProducts } from "@/lib/server-api";
 
+// Force dynamic rendering to ensure fresh data on each request
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: "Products | CandidWear",
   description: "Browse our collection of premium bags and accessories.",

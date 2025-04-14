@@ -43,6 +43,12 @@ const productSchema = z.object({
 
 // GET - Fetch products with filtering
 export async function GET(request: NextRequest) {
+  // Set cache control headers to prevent caching
+  const headers = new Headers();
+  headers.set('Cache-Control', 'no-store, must-revalidate');
+  headers.set('Pragma', 'no-cache');
+  headers.set('Expires', '0');
+  
   try {
     // Parse URL parameters
     const url = new URL(request.url);
@@ -127,7 +133,7 @@ export async function GET(request: NextRequest) {
           total,
           totalPages,
         },
-      });
+      }, { headers });
     } catch (dbError) {
       console.error("Database connection error:", dbError);
       return NextResponse.json({ message: "Server error" }, { status: 500 });

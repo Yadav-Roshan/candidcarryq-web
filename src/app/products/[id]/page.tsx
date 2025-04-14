@@ -1,3 +1,6 @@
+// Force dynamic rendering to ensure fresh data on each request
+export const dynamic = 'force-dynamic';
+
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ProductDetails } from "@/components/products/product-details";

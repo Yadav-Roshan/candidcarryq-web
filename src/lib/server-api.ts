@@ -33,15 +33,19 @@ function isValidObjectId(id: string): boolean {
 }
 
 // Server-side only functions with cache
-export const getAllProducts = cache(async (paramsInput: any = {}) => {
+export async function getAllProducts(filters = {}) {
+  // Add cache control headers to prevent caching
+  const cacheOptions = { next: { revalidate: 0 } };
+
   try {
-    console.log("Connecting to database to fetch products...");
     await connectToDatabase();
+
+    console.log("Connecting to database to fetch products...");
     console.log("Database connection successful");
 
     // Handle params that might be a promise
     const params =
-      paramsInput instanceof Promise ? await paramsInput : paramsInput;
+      filters instanceof Promise ? await filters : filters;
 
     // Now safely access properties
     const page = Number(params?.page) || 1;
@@ -134,7 +138,7 @@ export const getAllProducts = cache(async (paramsInput: any = {}) => {
     console.error("Error fetching products:", error);
     return []; // Return empty array instead of mock data
   }
-});
+}
 
 export const getProductById = cache(async (id: string) => {
   try {
