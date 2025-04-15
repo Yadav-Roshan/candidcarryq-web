@@ -46,7 +46,7 @@ export default function RootLayout({
                     <Footer />
                     {/* Add WhatsApp button with your business phone number */}
                     <WhatsAppButton
-                      phoneNumber="+9779812138824" // Change to your preferred phone number
+                      phoneNumber="+9779826868800" // Change to your preferred phone number
                       message="Hello from CandidCarryq! I'm interested in your products." // Change to your preferred default message
                       size="md" // Use larger size option
                     />
