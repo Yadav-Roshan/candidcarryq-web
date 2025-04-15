@@ -45,7 +45,7 @@ const productSchema = z.object({
 export async function GET(request: NextRequest) {
   // Set cache control headers to prevent caching
   const headers = new Headers();
-  headers.set('Cache-Control', 'no-store, must-revalidate');
+  headers.set('Cache-Control', 'no-store, must-revalidate, max-age=0');
   headers.set('Pragma', 'no-cache');
   headers.set('Expires', '0');
   
@@ -140,7 +140,10 @@ export async function GET(request: NextRequest) {
     }
   } catch (error) {
     console.error("Error fetching products:", error);
-    return NextResponse.json({ message: "Server error" }, { status: 500 });
+    return NextResponse.json({ message: "Server error" }, { 
+      status: 500,
+      headers 
+    });
   }
 }
 

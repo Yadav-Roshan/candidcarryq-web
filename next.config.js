@@ -5,6 +5,9 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ["localhost:3000"],
     },
+    // Ensure we render on the server every time
+    runtime: 'nodejs',
+    serverActions: true,
   },
   images: {
     domains: ["images.unsplash.com", "plus.unsplash.com", "placehold.co"],
@@ -56,6 +59,8 @@ const nextConfig = {
     return config;
   },
   poweredByHeader: false, // Remove X-Powered-By header for security
+  // Set output to 'standalone' for a more streamlined production build
+  output: 'standalone',
 };
 
 module.exports = nextConfig;

@@ -418,7 +418,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
         <div className="border-t border-b py-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
           <div className="flex items-center">
             <Truck className="h-5 w-5 mr-2 text-muted-foreground" />
-            <span>Free shipping on orders over Rs.5000</span>
+            <span>Free shipping on orders of 10 or more bags</span>
           </div>
           <div className="flex items-center">
             <Shield className="h-5 w-5 mr-2 text-muted-foreground" />

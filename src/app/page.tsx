@@ -1,10 +1,13 @@
+// Force dynamic rendering to ensure fresh data on each request
+export const dynamic = 'force-dynamic';
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { TrustIndicators } from "@/components/home/trust-indicators"
 import { NewsletterSubscription } from "@/components/home/newsletter"
 import { ProductCard } from "@/components/products/product-card"
-import { getFeaturedProducts } from "@/lib/api" // Server-side function 
+import { getFeaturedProducts } from "@/lib/server-api" // Server-side function 
 import { generateMetadata } from "@/lib/metadata";
 
 export const metadata = generateMetadata({

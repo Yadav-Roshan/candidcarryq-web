@@ -4,6 +4,7 @@ import Product from "@/models/product.model";
 import { authenticate, isAdmin } from "@/middleware/auth.middleware";
 import { z } from "zod";
 import { Document } from "mongoose";
+import { normalizeCategory } from "@/lib/category-utils";
 
 // Define a ProductDocument interface for proper typing
 interface ProductDocument extends Document {
@@ -131,6 +132,11 @@ export async function POST(request: NextRequest) {
 
     // Parse and validate request body
     const body = await request.json();
+
+    // Normalize the category
+    if (body.category) {
+      body.category = normalizeCategory(body.category);
+    }
 
     // Remove the mapping and just assign publishedDate
     const processedBody = {

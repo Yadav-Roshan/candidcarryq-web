@@ -26,6 +26,12 @@ function isValidObjectId(id: string): boolean {
 
 // GET - Get recommended products based on product ID and category
 export async function GET(request: NextRequest) {
+  // Set cache control headers to prevent caching
+  const headers = new Headers();
+  headers.set('Cache-Control', 'no-store, must-revalidate, max-age=0');
+  headers.set('Pragma', 'no-cache');
+  headers.set('Expires', '0');
+  
   try {
     await connectToDatabase();
 
@@ -50,7 +56,7 @@ export async function GET(request: NextRequest) {
         .filter((p) => !category || p.category === category)
         .slice(0, 4);
 
-      return NextResponse.json(mockRecommendations);
+      return NextResponse.json(mockRecommendations, { headers });
     }
 
     // Build query - exclude the current product
@@ -82,10 +88,10 @@ export async function GET(request: NextRequest) {
         .filter((p) => p.id !== productId)
         .slice(0, 4);
 
-      return NextResponse.json(mockRecommendations);
+      return NextResponse.json(mockRecommendations, { headers });
     }
 
-    // Transform MongoDB docs to plain objects
+    // Transform MongoDB docs to plain objects and add headers
     const recommendationsData = recommendations.map((product) => ({
       id: product._id.toString(),
       name: product.name,
@@ -99,17 +105,17 @@ export async function GET(request: NextRequest) {
       stock: product.stock || 0,
     }));
 
-    return NextResponse.json(recommendationsData);
+    return NextResponse.json(recommendationsData, { headers });
   } catch (error) {
     console.error("Error fetching product recommendations:", error);
 
-    // Fallback to mock data
+    // Fallback to mock data with headers
     const mockRecommendations = mockProducts
       .filter(
         (p) => p.id !== String(new URL(request.url).searchParams.get("id"))
       )
       .slice(0, 4);
 
-    return NextResponse.json(mockRecommendations);
+    return NextResponse.json(mockRecommendations, { headers });
   }
 }

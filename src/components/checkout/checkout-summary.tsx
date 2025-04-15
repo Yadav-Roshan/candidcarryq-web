@@ -16,7 +16,7 @@ interface CheckoutSummaryProps {
   subtotal: number;
   tax: number;
   shipping: number;
-  discount?: number; // Add discount prop
+  discount?: number;
   total: number;
 }
 
@@ -25,9 +25,15 @@ export default function CheckoutSummary({
   subtotal,
   tax,
   shipping,
-  discount = 0, // Default to 0 if not provided
+  discount = 0,
   total,
 }: CheckoutSummaryProps) {
+  // Calculate total quantity for shipping info display
+  const totalQuantity = cartItems.reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
+
   return (
     <div>
       <div className="p-6">
@@ -90,7 +96,16 @@ export default function CheckoutSummary({
 
           <div className="flex justify-between">
             <span className="text-muted-foreground">Shipping</span>
-            <span>{shipping === 0 ? "Free" : formatNPR(shipping)}</span>
+            <span>
+              {shipping === 0 ? (
+                <span className="text-green-600">Free</span>
+              ) : (
+                formatNPR(shipping)
+              )}
+              {shipping === 0 && totalQuantity >= 10 && (
+                <span className="text-xs text-green-600 ml-1">(10+ items)</span>
+              )}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Tax (13%)</span>

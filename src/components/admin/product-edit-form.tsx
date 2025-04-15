@@ -31,6 +31,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { CldUploadWidget } from "next-cloudinary";
 import { Badge } from "@/components/ui/badge";
 import { useDebugValue } from "react";
+import { normalizeCategory } from "@/lib/category-utils";
+import { CategoryFormField } from "./product-form-fields";
 
 // Validation schema
 const productSchema = z.object({
@@ -284,7 +286,7 @@ export function ProductEditForm({
 
       const normalizedValues = {
         ...values,
-        category: values.category.trim().toLowerCase(),
+        category: normalizeCategory(values.category.trim()),
       };
 
       await onSubmit({
@@ -471,23 +473,8 @@ export function ProductEditForm({
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. backpacks, handbags" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Enter a category for your product (will be normalized to
-                    lowercase)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Replace the text input with the CategoryFormField dropdown component */}
+            <CategoryFormField />
 
             <FormField
               control={form.control}

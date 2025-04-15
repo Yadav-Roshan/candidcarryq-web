@@ -1,3 +1,6 @@
+// Force dynamic rendering to ensure fresh data on each request
+export const dynamic = 'force-dynamic';
+
 import { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
@@ -9,6 +12,8 @@ import { getAllProducts } from "@/lib/server-api";
 import { NoProducts } from "@/components/products/no-products";
 // Import the Product type from the product service
 import { Product as ProductType } from "@/lib/client/product-service";
+// Add the import
+import { normalizeCategory } from "@/lib/category-utils";
 
 // We'll use the imported Product type instead of defining our own
 interface CategoryWithProducts {
@@ -31,17 +36,20 @@ export default async function CategoriesPage() {
 
   allProducts.forEach((product) => {
     if (product.category) {
-      // Normalize category to lowercase
-      const normalizedCategory = product.category.toLowerCase().trim();
+      // Use our normalizeCategory function instead of simple toLowerCase
+      const normalizedCategory = normalizeCategory(product.category);
 
       // Skip empty categories
       if (!normalizedCategory) return;
 
       // If this normalized category isn't in our map yet, add it with the original case preserved
       if (!categoriesMap.has(normalizedCategory)) {
+        // Use the normalized version for display, keeping the first letter capitalized
+        const displayName = normalizedCategory.charAt(0).toUpperCase() + normalizedCategory.slice(1);
+        
         categoriesMap.set(normalizedCategory, {
           normalized: normalizedCategory,
-          display: product.category, // Keep original case for display
+          display: displayName, 
           products: [],
         });
       }

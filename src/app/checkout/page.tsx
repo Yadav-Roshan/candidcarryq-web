@@ -71,7 +71,15 @@ export default function CheckoutPage() {
     (total, item) => total + (item.salePrice || item.price) * item.quantity,
     0
   );
-  const shipping = subtotal > 10000 ? 0 : 200; // Free shipping over 10k
+
+  // Calculate total quantity of items in the cart
+  const totalQuantity = items.reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
+
+  // Free shipping if 10 or more items are ordered
+  const shipping = totalQuantity >= 10 ? 0 : 200;
   const discount = promoCode?.discountAmount || 0;
   const tax = (subtotal - discount) * 0.13; // 13% tax
   const total = subtotal - discount + shipping + tax;

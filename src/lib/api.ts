@@ -6,7 +6,6 @@ export {
 } from "./api-client";
 
 // Server-only imports and exports below (these will not be included in client bundles)
-import { cache } from "react";
 import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/product.model";
 import mongoose from "mongoose";
@@ -40,7 +39,7 @@ function isValidObjectId(id: string): boolean {
 }
 
 // Server-side only functions
-export const getAllProducts = cache(async (paramsInput: any = {}) => {
+export const getAllProducts = async (paramsInput: any = {}) => {
   try {
     await connectToDatabase();
 
@@ -138,9 +137,9 @@ export const getAllProducts = cache(async (paramsInput: any = {}) => {
     console.error("Error fetching products:", error);
     return []; // Return empty array instead of mock data
   }
-});
+};
 
-export const getProductById = cache(async (id: string) => {
+export const getProductById = async (id: string) => {
   try {
     await connectToDatabase();
 
@@ -181,9 +180,9 @@ export const getProductById = cache(async (id: string) => {
     console.error(`Error fetching product ${id}:`, error);
     return null; // Return null instead of checking mock data
   }
-});
+};
 
-export const getFeaturedProducts = cache(async () => {
+export const getFeaturedProducts = async () => {
   try {
     await connectToDatabase();
 
@@ -212,4 +211,4 @@ export const getFeaturedProducts = cache(async () => {
     console.error("Error fetching featured products:", error);
     return []; // Return empty array instead of mock data
   }
-});
+};

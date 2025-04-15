@@ -1,18 +1,18 @@
+// Add the import
+import { normalizeCategory, VALID_CATEGORIES } from "@/lib/category-utils";
+
+// Force dynamic rendering to ensure fresh data on each request
+export const dynamic = 'force-dynamic';
+
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ProductGrid } from "@/components/products/product-grid";
 import { ProductsHeader } from "@/components/products/products-header";
 import { ProductsFilters } from "@/components/products/products-filters";
 import { getAllProducts } from "@/lib/server-api";
 
-// Define valid category paths
-const validCategories = [
-  "backpacks",
-  "handbags",
-  "wallets",
-  "travel",
-  "accessories",
-];
+// Define valid category paths - use our VALID_CATEGORIES const
+const validCategories = VALID_CATEGORIES;
 
 export async function generateMetadata({
   params,
@@ -52,19 +52,28 @@ export default async function CategoryPage({
   searchParams,
 }: PageProps) {
   const { category } = await params;
+  
+  // Normalize the category from the URL
+  const normalizedCategory = normalizeCategory(category);
+  
+  // If the normalized category is different from the URL parameter,
+  // redirect to the normalized version
+  if (normalizedCategory !== category) {
+    redirect(`/categories/${normalizedCategory}`);
+  }
 
   // Validate category
-  if (!validCategories.includes(category)) {
+  if (!validCategories.includes(normalizedCategory)) {
     notFound();
   }
 
   // Add category to search params
-  const queryParams = { ...searchParams, category };
+  const queryParams = { ...searchParams, category: normalizedCategory };
 
   // Server-side fetch products
   const products = await getAllProducts(queryParams);
 
-  const categoryTitle = category.charAt(0).toUpperCase() + category.slice(1);
+  const categoryTitle = normalizedCategory.charAt(0).toUpperCase() + normalizedCategory.slice(1);
 
   return (
     <div className="container py-8">

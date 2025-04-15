@@ -80,6 +80,12 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Set cache control headers to prevent caching
+  const headers = new Headers();
+  headers.set('Cache-Control', 'no-store, must-revalidate, max-age=0');
+  headers.set('Pragma', 'no-cache');
+  headers.set('Expires', '0');
+  
   const { id } = await params;
   try {
     // Resolve params if it's a Promise
@@ -90,7 +96,7 @@ export async function GET(
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
         { message: "Invalid product ID format" },
-        { status: 400 }
+        { status: 400, headers }
       );
     }
 
@@ -101,11 +107,11 @@ export async function GET(
       // Don't fall back to mock data, just return a 404
       return NextResponse.json(
         { message: "Product not found" },
-        { status: 404 }
+        { status: 404, headers }
       );
     }
 
-    // Return the found product
+    // Return the found product with headers to prevent caching
     return NextResponse.json({
       product: {
         id: product._id.toString(),
@@ -131,7 +137,7 @@ export async function GET(
         warranty: product.warranty,
         returnPolicy: product.returnPolicy,
       },
-    });
+    }, { headers });
   } catch (error) {
     console.error(
       `Error fetching product ${
@@ -141,7 +147,7 @@ export async function GET(
     );
     return NextResponse.json(
       { message: "Error fetching product" },
-      { status: 500 }
+      { status: 500, headers }
     );
   }
 }

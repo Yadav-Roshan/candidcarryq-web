@@ -21,7 +21,15 @@ export default function CartContent() {
     (total, item) => total + (item.salePrice || item.price) * item.quantity,
     0
   );
-  const shipping = subtotal >= 5000 ? 0 : 250;
+
+  // Calculate total quantity of items in the cart
+  const totalQuantity = cartItems.reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
+
+  // Free shipping if 10 or more items are ordered
+  const shipping = totalQuantity >= 10 ? 0 : 250;
   const tax = Math.round(subtotal * 0.13); // 13% tax
   const total = subtotal + shipping + tax;
 

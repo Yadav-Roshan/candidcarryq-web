@@ -1,8 +1,8 @@
 import "server-only";
-import { cache } from "react";
 import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/product.model";
 import mongoose from "mongoose";
+import { normalizeCategory } from "@/lib/category-utils";
 
 // Define interface for ProductDocument
 interface ProductDocument {
@@ -32,11 +32,8 @@ function isValidObjectId(id: string): boolean {
   return mongoose.Types.ObjectId.isValid(id);
 }
 
-// Server-side only functions with cache
+// Remove cache wrapper from functions for dynamic data fetching
 export async function getAllProducts(filters = {}) {
-  // Add cache control headers to prevent caching
-  const cacheOptions = { next: { revalidate: 0 } };
-
   try {
     await connectToDatabase();
 
@@ -44,13 +41,18 @@ export async function getAllProducts(filters = {}) {
     console.log("Database connection successful");
 
     // Handle params that might be a promise
-    const params =
-      filters instanceof Promise ? await filters : filters;
+    const params = filters instanceof Promise ? await filters : filters;
 
     // Now safely access properties
     const page = Number(params?.page) || 1;
     const limit = Number(params?.limit) || 100; // Increase default limit to get more products
-    const category = params?.category;
+    let category = params?.category;
+
+    // Normalize the category if it exists
+    if (category) {
+      category = normalizeCategory(category);
+    }
+
     const sort = params?.sort || "newest";
     const minPrice = params?.minPrice ? Number(params.minPrice) : undefined;
     const maxPrice = params?.maxPrice ? Number(params.maxPrice) : undefined;
@@ -61,7 +63,11 @@ export async function getAllProducts(filters = {}) {
 
     // Build query
     const query: any = {};
-    if (category) query.category = category;
+    if (category) {
+      // Use regex to make it case insensitive and allow for plural/singular matching
+      const categoryPattern = new RegExp(`^${category}s?$`, "i");
+      query.category = categoryPattern;
+    }
 
     // Price range filter
     if (minPrice !== undefined || maxPrice !== undefined) {
@@ -140,21 +146,22 @@ export async function getAllProducts(filters = {}) {
   }
 }
 
-export const getProductById = cache(async (id: string) => {
+// Remove cache wrapper from getProductById
+export async function getProductById(id: string) {
   try {
     await connectToDatabase();
 
     // Check if the ID is a valid MongoDB ObjectId
     if (!isValidObjectId(id)) {
       console.log(`Product ID ${id} is not a valid ObjectId`);
-      return null; // Return null instead of checking mock data
+      return null;
     }
 
     const product = (await Product.findById(id)) as ProductDocument | null;
 
     if (!product) {
       console.log(`Product ${id} not found`);
-      return null; // Return null instead of checking mock data
+      return null;
     }
 
     return {
@@ -179,11 +186,12 @@ export const getProductById = cache(async (id: string) => {
     };
   } catch (error) {
     console.error(`Error fetching product ${id}:`, error);
-    return null; // Return null instead of checking mock data
+    return null;
   }
-});
+}
 
-export const getFeaturedProducts = cache(async () => {
+// Remove cache wrapper from getFeaturedProducts
+export async function getFeaturedProducts() {
   try {
     await connectToDatabase();
 
@@ -192,7 +200,6 @@ export const getFeaturedProducts = cache(async () => {
     )) as ProductDocument[];
 
     if (featuredProducts.length === 0) {
-      // Return empty array if no featured products in DB
       return [];
     }
 
@@ -210,6 +217,6 @@ export const getFeaturedProducts = cache(async () => {
     }));
   } catch (error) {
     console.error("Error fetching featured products:", error);
-    return []; // Return empty array instead of mock data
+    return [];
   }
-});
+}
