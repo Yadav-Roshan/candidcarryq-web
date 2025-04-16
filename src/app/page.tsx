@@ -11,8 +11,8 @@ import { getFeaturedProducts } from "@/lib/server-api" // Server-side function
 import { generateMetadata } from "@/lib/metadata";
 
 export const metadata = generateMetadata({
-  title: "Premium Bags and Accessories for Every Lifestyle",
-  description: "Discover our exquisite collection of handbags, backpacks, and travel bags designed for your modern lifestyle. Quality craftsmanship and stylish designs.",
+  title: "Online Shopping Nepal – Buy Luxury Bags, Backpacks & Travel Accessories",
+  description: "Shop online at Candid CarryQ, Nepal’s destination for luxury handbags, backpacks, and travel bags. Discover authentic craftsmanship, elegant designs, and durable materials. Free delivery & easy returns available.",
 });
 
 export default async function Home() {
