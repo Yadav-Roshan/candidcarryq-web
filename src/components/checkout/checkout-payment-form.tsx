@@ -258,7 +258,7 @@ export default function CheckoutPaymentForm({
               <div className="flex flex-col items-center space-y-4">
                 <div className="relative h-64 w-64 border rounded-md overflow-hidden bg-muted">
                   <Image
-                    src="/images/payments/esewa-qr.jpg"
+                    src="/images/payments/khalti-qr.jpg"
                     alt="Khalti QR Code"
                     fill
                     className="object-contain p-2"
