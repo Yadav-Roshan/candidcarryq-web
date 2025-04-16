@@ -191,7 +191,7 @@ export default function CheckoutPaymentForm({
               <div className="flex flex-col items-center space-y-4">
                 <div className="relative h-64 w-64 border rounded-md overflow-hidden bg-muted">
                   <Image
-                    src="/images/payments/esewa-qr.png"
+                    src="/images/payments/esewa-qr.jpg"
                     alt="eSewa QR Code"
                     fill
                     className="object-contain p-2"
@@ -199,7 +199,7 @@ export default function CheckoutPaymentForm({
                 </div>
                 <div className="text-center">
                   <p className="text-muted-foreground mb-1">Pay using eSewa</p>
-                  <p className="font-medium">eSewa ID: 9801234567</p>
+                  <p className="font-medium">eSewa ID: 9826868800</p>
                   <p className="text-sm text-muted-foreground mt-4">
                     Scan the QR code with your eSewa app or manually transfer
                     the amount
@@ -213,7 +213,7 @@ export default function CheckoutPaymentForm({
               <div className="flex flex-col items-center space-y-4">
                 <div className="relative h-64 w-64 border rounded-md overflow-hidden bg-muted">
                   <Image
-                    src="/images/payments/khalti-qr.png"
+                    src="/images/payments/esewa-qr.jpg"
                     alt="Khalti QR Code"
                     fill
                     className="object-contain p-2"
@@ -221,7 +221,7 @@ export default function CheckoutPaymentForm({
                 </div>
                 <div className="text-center">
                   <p className="text-muted-foreground mb-1">Pay using Khalti</p>
-                  <p className="font-medium">Khalti ID: 9807654321</p>
+                  <p className="font-medium">Khalti ID: 9826868800</p>
                   <p className="text-sm text-muted-foreground mt-4">
                     Scan the QR code with your Khalti app or manually transfer
                     the amount
@@ -235,7 +235,7 @@ export default function CheckoutPaymentForm({
               <div className="flex flex-col items-center space-y-4">
                 <div className="relative h-64 w-64 border rounded-md overflow-hidden bg-muted">
                   <Image
-                    src="/images/payments/bank-qr.png"
+                    src="/images/payments/bank-qr.jpg"
                     alt="Mobile Banking QR Code"
                     fill
                     className="object-contain p-2"
@@ -246,13 +246,13 @@ export default function CheckoutPaymentForm({
                     Pay using Mobile Banking
                   </p>
                   <p className="font-medium">
-                    Account Number: 01234567890123456
+                    Account Number: 18407010070805
                   </p>
                   <p className="font-medium">
-                    Account Holder: CandidWear Pvt. Ltd.
+                    Account Holder: Gautam Sah
                   </p>
                   <p className="font-medium">
-                    Bank: Nepal Investment Bank Ltd.
+                    Bank: Global IME Bank
                   </p>
                   <p className="text-sm text-muted-foreground mt-4">
                     Transfer the exact amount using your mobile banking app
