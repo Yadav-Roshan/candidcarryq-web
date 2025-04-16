@@ -48,6 +48,7 @@ export default function CheckoutPage() {
     paymentMethod: "esewa",
     transactionRef: "",
     paymentProofUrl: "",
+    paymentProofPublicId: "", // Add the public ID field
   });
 
   // Try to retrieve promo code from localStorage on page load
@@ -229,6 +230,7 @@ export default function CheckoutPage() {
         paymentMethod: paymentData.paymentMethod,
         transactionRef: paymentData.transactionId,
         paymentProofImage: paymentData.paymentProofUrl,
+        paymentProofPublicId: paymentData.paymentProofPublicId, // Include the public ID
         shippingCost: shipping,
         taxAmount: tax,
         discount: discount, // Include discount amount

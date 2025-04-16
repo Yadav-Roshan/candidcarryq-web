@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -23,6 +23,7 @@ import {
   getUploadSignature,
   getUploadWidgetOptions,
 } from "@/lib/client/image-upload-service";
+import { deletePaymentProofImage } from "@/lib/client/payment-image-service";
 import { useToast } from "@/components/ui/use-toast";
 import { CldUploadWidget } from "next-cloudinary";
 
@@ -35,6 +36,7 @@ const paymentFormSchema = z.object({
   paymentProofUrl: z
     .string()
     .url("A valid payment proof image URL is required"),
+  paymentProofPublicId: z.string().optional(),
 });
 
 type PaymentFormValues = z.infer<typeof paymentFormSchema>;
@@ -53,14 +55,14 @@ interface CheckoutPaymentFormProps {
 export default function CheckoutPaymentForm({
   onSubmit,
   isSubmitting,
-  orderId, // Accept orderId prop
+  orderId,
 }: CheckoutPaymentFormProps) {
   const [selectedTab, setSelectedTab] = useState("esewa");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [uploadOptions, setUploadOptions] = useState<any>(null);
   const [isCloudinaryLoading, setIsCloudinaryLoading] = useState(false);
-  const [cloudinaryOptions, setCloudinaryOptions] = useState<any>(null);
 
   const { toast } = useToast();
 
@@ -71,6 +73,7 @@ export default function CheckoutPaymentForm({
       paymentMethod: "esewa",
       transactionId: "",
       paymentProofUrl: "",
+      paymentProofPublicId: "",
     },
   });
 
@@ -147,9 +150,11 @@ export default function CheckoutPaymentForm({
     }
 
     const imageUrl = result.secure_url;
+    const publicId = result.public_id;
 
-    // Update form with image URL
+    // Update form with image URL and public ID
     form.setValue("paymentProofUrl", imageUrl);
+    form.setValue("paymentProofPublicId", publicId);
 
     // Show preview
     setPreviewImage(imageUrl);
@@ -158,6 +163,45 @@ export default function CheckoutPaymentForm({
       title: "Upload Complete",
       description: "Payment proof image uploaded successfully",
     });
+  };
+
+  // Handle image deletion
+  const handleImageDelete = async () => {
+    try {
+      setIsDeleting(true);
+      const publicId = form.getValues("paymentProofPublicId");
+      
+      if (!publicId) {
+        // If no public ID, just clear the form (frontend only cleanup)
+        form.setValue("paymentProofUrl", "");
+        form.setValue("paymentProofPublicId", "");
+        setPreviewImage(null);
+        return;
+      }
+      
+      // Delete from Cloudinary
+      await deletePaymentProofImage(publicId);
+      
+      // Clear form values
+      form.setValue("paymentProofUrl", "");
+      form.setValue("paymentProofPublicId", "");
+      setPreviewImage(null);
+      
+      toast({
+        title: "Image Removed",
+        description: "Payment proof image has been deleted",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error 
+          ? error.message 
+          : "Failed to delete image",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // Handle form submission
@@ -171,8 +215,9 @@ export default function CheckoutPaymentForm({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
-          {/* Hidden field for payment proof URL */}
+          {/* Hidden field for payment proof URL and public ID */}
           <input type="hidden" {...form.register("paymentProofUrl")} />
+          <input type="hidden" {...form.register("paymentProofPublicId")} />
 
           {/* Payment method tabs */}
           <Tabs
@@ -287,7 +332,6 @@ export default function CheckoutPaymentForm({
           {/* Payment Screenshot Upload */}
           <div className="space-y-2">
             <Label htmlFor="paymentProof">Upload Payment Screenshot</Label>
-
             <div className="flex items-center gap-4">
               {uploadOptions && (
                 <CldUploadWidget
@@ -307,7 +351,7 @@ export default function CheckoutPaymentForm({
                       variant="outline"
                       onClick={() => open()}
                       className="w-full"
-                      disabled={isUploading}
+                      disabled={isUploading || isDeleting}
                     >
                       {isUploading ? (
                         <>
@@ -349,12 +393,14 @@ export default function CheckoutPaymentForm({
                   variant="destructive"
                   size="sm"
                   className="absolute top-2 right-2"
-                  onClick={() => {
-                    setPreviewImage(null);
-                    form.setValue("paymentProofUrl", "");
-                  }}
+                  onClick={handleImageDelete}
+                  disabled={isDeleting}
                 >
-                  Remove
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>Remove</>
+                  )}
                 </Button>
               </div>
             )}
@@ -367,7 +413,7 @@ export default function CheckoutPaymentForm({
           <Button
             type="submit"
             className="w-full"
-            disabled={isSubmitting || isUploading || !form.formState.isValid}
+            disabled={isSubmitting || isUploading || isDeleting || !form.formState.isValid}
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isSubmitting ? "Processing Payment..." : "Complete Order"}
