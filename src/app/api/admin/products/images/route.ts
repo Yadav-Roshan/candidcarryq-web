@@ -93,10 +93,20 @@ export async function DELETE(request: NextRequest) {
 
       await product.save();
 
-      return NextResponse.json({
-        success: true,
-        message: "Image deleted successfully"
-      });
+      // After successful deletion, clear the Next.js cache for this product
+      if (product) {
+        // Add cache-busting headers to the response
+        const headers = new Headers();
+        headers.append('Cache-Control', 'no-cache, no-store, must-revalidate');
+        headers.append('Pragma', 'no-cache');
+        headers.append('Expires', '0');
+
+        return NextResponse.json({
+          success: true,
+          message: "Image deleted successfully",
+          timestamp: Date.now() // Add timestamp for cache invalidation
+        }, { headers });
+      }
     }
   } catch (error) {
     console.error("Error deleting image:", error);
