@@ -26,7 +26,7 @@ interface Product {
   category?: string;
   salePrice?: number;
   stock?: number;
-  featured?: boolean;
+  isFeatured?: boolean;
   publishedDate?: string;
 }
 
@@ -50,6 +50,7 @@ export default function ProductsPage() {
         }
 
         const data = await response.json();
+        console.log(data.products[0])
         setProducts(data.products || []);
         setFilteredProducts(data.products || []);
       } catch (error) {
@@ -217,11 +218,11 @@ export default function ProductsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {product.featured ? (
-                        <Badge className="bg-primary">Yes</Badge>
+                      {product.isFeatured ? (
+                        <Badge className="bg-green-600">Yes</Badge>
                       ) : (
                         <span className="text-muted-foreground">
-                          No (value: {String(product.featured)})
+                          <Badge className="bg-red-600">No</Badge> 
                         </span>
                       )}
                     </TableCell>

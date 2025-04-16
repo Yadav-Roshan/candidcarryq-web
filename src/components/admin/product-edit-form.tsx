@@ -88,6 +88,8 @@ export function ProductEditForm({
   const [colorInput, setColorInput] = useState("");
   const [sizeInput, setSizeInput] = useState("");
 
+  const [deletingImages, setDeletingImages] = useState<Record<number, boolean>>({});
+
   const form = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -206,13 +208,67 @@ export function ProductEditForm({
     }, 100);
   };
 
-  const removeImage = (index: number) => {
-    setDisableUploadWidget(false);
+  const removeImage = async (index: number) => {
+    const imageToDelete = productImages[index];
+    
+    if (!isNew && product?.id) {
+      try {
+        setDeletingImages(prev => ({ ...prev, [index]: true }));
+        
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          throw new Error("Authentication token not found. Please log in again.");
+        }
 
+        const response = await fetch("/api/admin/products/images", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            productId: product.id,
+            imageUrl: imageToDelete.url,
+            publicId: imageToDelete.publicId,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to delete image");
+        }
+
+        toast({
+          title: "Image deleted",
+          description: "Image has been removed from the product",
+        });
+      } catch (error) {
+        console.error("Error deleting image:", error);
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to delete image",
+          variant: "destructive",
+        });
+        
+        setDeletingImages(prev => {
+          const updated = { ...prev };
+          delete updated[index];
+          return updated;
+        });
+        return;
+      }
+    }
+
+    setDisableUploadWidget(false);
     const wasFirstImage = index === 0;
     const updatedImages = productImages.filter((_, i) => i !== index);
-
     setProductImages(updatedImages);
+
+    setDeletingImages(prev => {
+      const updated = { ...prev };
+      delete updated[index];
+      return updated;
+    });
 
     setTimeout(() => {
       if (wasFirstImage && updatedImages.length > 0) {
@@ -602,7 +658,7 @@ export function ProductEditForm({
                             <img
                               src={image.url}
                               alt={`Product image ${index + 1}`}
-                              className="object-cover w-full h-full"
+                              className={`object-cover w-full h-full ${deletingImages[index] ? 'opacity-50' : ''}`}
                             />
                             {index === 0 && (
                               <div className="absolute top-0 left-0 bg-primary text-white text-xs px-2 py-1">
@@ -615,8 +671,13 @@ export function ProductEditForm({
                               size="icon"
                               className="absolute top-2 right-2"
                               onClick={() => removeImage(index)}
+                              disabled={deletingImages[index]}
                             >
-                              <X className="h-4 w-4" />
+                              {deletingImages[index] ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <X className="h-4 w-4" />
+                              )}
                             </Button>
                           </div>
                         ))}
