@@ -9,7 +9,7 @@ export default function AboutPage() {
 
         <div className="relative aspect-video w-full mb-8 overflow-hidden rounded-lg">
           <Image
-            src="/logo.png"
+            src="/logo.jpg"
             alt="CandidCarryq team"
             fill
             className="object-contain"
