@@ -442,6 +442,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
             <div className="prose prose-sm dark:prose-invert">
               {product.fullDescription ? (
                 <div
+                  className="whitespace-pre-wrap"
                   dangerouslySetInnerHTML={{ __html: product.fullDescription }}
                 />
               ) : (

@@ -11,7 +11,7 @@ import { getFeaturedProducts } from "@/lib/server-api" // Server-side function
 import { generateMetadata } from "@/lib/metadata";
 
 export const metadata = generateMetadata({
-  title: "Online Shopping Nepal – Buy Luxury Bags, Backpacks & Travel Accessories",
+  title: "CandidCarryQ: Online Shopping Nepal – Buy Luxury Bags, Backpacks & Travel Accessories",
   description: "Shop online at Candid CarryQ, Nepal’s destination for luxury handbags, backpacks, and travel bags. Discover authentic craftsmanship, elegant designs, and durable materials. Free delivery & easy returns available.",
 });
 
@@ -24,7 +24,7 @@ export default async function Home() {
       {/* Hero Section */}
       <section className="py-16 md:py-24 bg-slate-100 dark:bg-slate-900">
         <div className="container flex flex-col items-center text-center">
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">Online Shopping Nepal – Buy Luxury Bags, Backpacks & Travel Accessories          </h1>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">CandidCarryQ: Online Shopping Nepal – Buy Luxury Bags, Backpacks & Travel Accessories          </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl">
           Shop online at Candid CarryQ, Nepal’s destination for luxury handbags, backpacks, and travel bags. Discover authentic craftsmanship, elegant designs, and durable materials. Free delivery & easy returns available.
           </p>
