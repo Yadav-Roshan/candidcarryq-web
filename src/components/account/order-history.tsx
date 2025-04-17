@@ -798,7 +798,6 @@ export function OrderHistory() {
                                 <span>
                                   {formatPrice(
                                     order.total -
-                                      (order.taxAmount || 0) -
                                       (order.shippingCost || 0)
                                   )}
                                 </span>
@@ -821,11 +820,6 @@ export function OrderHistory() {
                                 <span>
                                   {formatPrice(order.shippingCost || 0)}
                                 </span>
-                              </div>
-
-                              <div className="flex justify-between">
-                                <span>Tax</span>
-                                <span>{formatPrice(order.taxAmount || 0)}</span>
                               </div>
 
                               <Separator className="my-2" />
@@ -1006,7 +1000,6 @@ export function OrderHistory() {
                                     <span>
                                       {formatPrice(
                                         order.total -
-                                          (order.taxAmount || 0) -
                                           (order.shippingCost || 0)
                                       )}
                                     </span>
@@ -1028,12 +1021,6 @@ export function OrderHistory() {
                                     <span>Shipping</span>
                                     <span>
                                       {formatPrice(order.shippingCost || 0)}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Tax</span>
-                                    <span>
-                                      {formatPrice(order.taxAmount || 0)}
                                     </span>
                                   </div>
                                   <Separator className="my-2" />

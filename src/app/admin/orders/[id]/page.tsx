@@ -1198,10 +1198,6 @@ export default function AdminOrderDetailPage() {
                     <span>Shipping</span>
                     <span>{formatPrice(order.shippingCost)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Tax</span>
-                    <span>{formatPrice(order.taxAmount)}</span>
-                  </div>
                   <Separator className="my-2" />
                   <div className="flex justify-between font-bold">
                     <span>Total</span>

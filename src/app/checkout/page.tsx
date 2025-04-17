@@ -82,8 +82,7 @@ export default function CheckoutPage() {
   // Free shipping if 10 or more items are ordered
   const shipping = totalQuantity >= 10 ? 0 : 100; // Changed from 200 to 100
   const discount = promoCode?.discountAmount || 0;
-  const tax = (subtotal - discount) * 0.13; // 13% tax
-  const total = subtotal - discount + shipping + tax;
+  const total = subtotal - discount + shipping;
 
   // Get product categories for promo code validation
   const cartCategories = items
@@ -232,10 +231,8 @@ export default function CheckoutPage() {
         paymentProofImage: paymentData.paymentProofUrl,
         paymentProofPublicId: paymentData.paymentProofPublicId, // Include the public ID
         shippingCost: shipping,
-        taxAmount: tax,
         discount: discount, // Include discount amount
         promoCode: promoCode?.code, // Include promo code if used
-        promoCodeDiscount: discount, // Set promoCodeDiscount same as discount for now
       };
 
       // Send order to API
@@ -468,12 +465,6 @@ export default function CheckoutPage() {
                 ) : (
                   <span>{formatPrice(shipping)}</span>
                 )}
-              </div>
-
-              {/* Tax */}
-              <div className="flex justify-between mb-4">
-                <span className="text-muted-foreground">Tax (13%)</span>
-                <span>{formatPrice(tax)}</span>
               </div>
 
               {/* Total */}

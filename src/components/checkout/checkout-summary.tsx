@@ -14,7 +14,7 @@ interface CartItem {
 interface CheckoutSummaryProps {
   cartItems: CartItem[];
   subtotal: number;
-  tax: number;
+  tax: number; // Keep this parameter for backward compatibility
   shipping: number;
   discount?: number;
   total: number;
@@ -23,7 +23,7 @@ interface CheckoutSummaryProps {
 export default function CheckoutSummary({
   cartItems,
   subtotal,
-  tax,
+  tax, // Keep this parameter for backward compatibility
   shipping,
   discount = 0,
   total,
@@ -106,10 +106,6 @@ export default function CheckoutSummary({
                 <span className="text-xs text-green-600 ml-1">(10+ items)</span>
               )}
             </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Tax (13%)</span>
-            <span>{formatNPR(tax)}</span>
           </div>
         </div>
 

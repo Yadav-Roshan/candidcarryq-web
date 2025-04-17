@@ -30,8 +30,7 @@ export default function CartContent() {
 
   // Free shipping if 10 or more items are ordered
   const shipping = totalQuantity >= 10 ? 0 : 100; // Changed from 250 to 100
-  const tax = Math.round(subtotal * 0.13); // 13% tax
-  const total = subtotal + shipping + tax;
+  const total = subtotal + shipping;
 
   const handleCheckout = () => {
     // Navigate to checkout page where promocodes will be applied
@@ -210,12 +209,6 @@ export default function CartContent() {
             ) : (
               <span>{formatPrice(shipping)}</span>
             )}
-          </div>
-
-          {/* Tax */}
-          <div className="flex justify-between mb-3">
-            <span className="text-muted-foreground">Tax (13%)</span>
-            <span>{formatPrice(tax)}</span>
           </div>
 
           <Separator className="my-4" />

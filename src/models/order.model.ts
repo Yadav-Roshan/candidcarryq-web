@@ -160,6 +160,7 @@ const OrderSchema = new Schema<IOrder>(
     taxAmount: {
       type: Number,
       default: 0,
+      required: false, // Make this field optional
     },
     discount: {
       type: Number,
