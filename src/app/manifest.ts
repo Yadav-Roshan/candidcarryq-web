@@ -2,9 +2,9 @@ import { MetadataRoute } from 'next'
  
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'CandidCarryq - Premium Bags & Accessories',
+    name: 'CandidCarryq - Online Shopping Nepal – Buy Luxury Bags, Backpacks & Travel Accessories',
     short_name: 'CandidCarryq',
-    description: 'Premium quality bags and accessories for every lifestyle',
+    description: 'Shop online at Candid CarryQ, Nepal’s destination for luxury handbags, backpacks, and travel bags. Discover authentic craftsmanship, elegant designs, and durable materials. Free delivery & easy returns available.',
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',

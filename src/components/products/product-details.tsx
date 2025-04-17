@@ -422,11 +422,11 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           </div>
           <div className="flex items-center">
             <Shield className="h-5 w-5 mr-2 text-muted-foreground" />
-            <span>{product.warranty || "2 year warranty"}</span>
+            <span>{product.warranty || "6 months warranty"}</span>
           </div>
           <div className="flex items-center">
             <RotateCcw className="h-5 w-5 mr-2 text-muted-foreground" />
-            <span>{product.returnPolicy || "30-day return policy"}</span>
+            <span>{product.returnPolicy || "7-day return policy"}</span>
           </div>
         </div>
 
@@ -489,7 +489,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
               <p>
                 Express shipping: 1-2 business days (additional charges apply)
               </p>
-              <p>Free shipping on orders over Rs. 5000</p>
+              <p>Free shipping on orders of 10 or more bags</p>
               <p>
                 We ship to all major cities in Nepal. Remote locations may
                 require additional delivery time.

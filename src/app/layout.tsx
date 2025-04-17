@@ -16,8 +16,8 @@ import { WhatsAppButton } from "@/components/whatsapp-button"; // Import the Wha
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "CandidCarryq - Premium Bags & Accessories",
-  description: "Discover premium quality bags and accessories at CandidCarryq.",
+  title: "CandidCarryq - Online Shopping Nepal – Buy Luxury Bags, Backpacks & Travel Accessories",
+  description: "Shop online at Candid CarryQ, Nepal’s destination for luxury handbags, backpacks, and travel bags. Discover authentic craftsmanship, elegant designs, and durable materials. Free delivery & easy returns available.",
 };
 
 export default function RootLayout({
