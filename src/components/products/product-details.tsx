@@ -41,8 +41,8 @@ interface ProductDetailsProps {
     weight?: string;
     capacity?: string;
     fullDescription?: string;
-    warranty?: string; // Add warranty field
-    returnPolicy?: string; // Add return policy field
+    warranty?: string;
+    returnPolicy?: string;
     rating?: number;
     reviewCount?: number;
     stock?: number;
@@ -292,7 +292,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
         </div>
 
         {/* Short description */}
-        <p className="text-muted-foreground">{product.description}</p>
+        <p className="text-muted-foreground whitespace-pre-wrap">{product.description}</p>
 
         {/* Product variants */}
         <div className="space-y-4">
@@ -445,7 +445,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                   dangerouslySetInnerHTML={{ __html: product.fullDescription }}
                 />
               ) : (
-                <p>{product.description}</p>
+                <p className="whitespace-pre-wrap">{product.description}</p>
               )}
             </div>
           </TabsContent>
@@ -490,6 +490,14 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                 Express shipping: 1-2 business days (additional charges apply)
               </p>
               <p>Free shipping on orders of 10 or more bags</p>
+              <h3>Shipping Charges</h3>
+
+              <p>Inside Kathmandu Valley: NPR 100 (up to 10 km)</p>
+
+              <p>Outside Kathmandu Valley: NPR 200 (for farthest locations)</p>
+
+              <h4>Note:</h4>
+              <p>Rates may vary based on distance and package weight (above 1 kg).</p>
               <p>
                 We ship to all major cities in Nepal. Remote locations may
                 require additional delivery time.

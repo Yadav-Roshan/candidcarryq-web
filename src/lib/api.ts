@@ -31,6 +31,8 @@ interface ProductDocument {
   weight?: string;
   capacity?: string;
   sizes?: string[];
+  warranty?: string;
+  returnPolicy?: string;
 }
 
 // Helper to check if ID is a valid MongoDB ObjectId
@@ -172,6 +174,8 @@ export const getProductById = async (id: string) => {
       dimensions: product.dimensions || undefined,
       weight: product.weight || undefined,
       capacity: product.capacity || undefined,
+      warranty: product.warranty || undefined,
+      returnPolicy: product.returnPolicy || undefined,
       rating: product.rating || undefined,
       reviewCount: product.reviewCount || undefined,
       stock: product.stock || 0,

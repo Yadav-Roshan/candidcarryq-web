@@ -80,7 +80,7 @@ export default function CheckoutPage() {
   );
 
   // Free shipping if 10 or more items are ordered
-  const shipping = totalQuantity >= 10 ? 0 : 200;
+  const shipping = totalQuantity >= 10 ? 0 : 100; // Changed from 200 to 100
   const discount = promoCode?.discountAmount || 0;
   const tax = (subtotal - discount) * 0.13; // 13% tax
   const total = subtotal - discount + shipping + tax;

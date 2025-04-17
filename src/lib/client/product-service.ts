@@ -19,6 +19,8 @@ export interface Product {
   weight?: string;
   capacity?: string;
   fullDescription?: string;
+  warranty?: string;
+  returnPolicy?: string;
   featured?: boolean;
   stock?: number;
 }

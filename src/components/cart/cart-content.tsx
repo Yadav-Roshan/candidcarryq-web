@@ -29,7 +29,7 @@ export default function CartContent() {
   );
 
   // Free shipping if 10 or more items are ordered
-  const shipping = totalQuantity >= 10 ? 0 : 250;
+  const shipping = totalQuantity >= 10 ? 0 : 100; // Changed from 250 to 100
   const tax = Math.round(subtotal * 0.13); // 13% tax
   const total = subtotal + shipping + tax;
 

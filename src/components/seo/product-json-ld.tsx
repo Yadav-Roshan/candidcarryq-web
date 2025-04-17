@@ -28,7 +28,9 @@ export function ProductJsonLd({ product }: { product: Product }) {
       itemCondition: "https://schema.org/NewCondition",
       availability: (product.stock ?? 0) > 0 
         ? "https://schema.org/InStock" 
-        : "https://schema.org/OutOfStock"
+        : "https://schema.org/OutOfStock",
+      warranty: product.warranty,
+      returnPolicy: product.returnPolicy
     },
     aggregateRating: product.rating 
       ? {
