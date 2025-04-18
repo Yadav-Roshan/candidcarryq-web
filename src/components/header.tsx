@@ -16,6 +16,7 @@ import {
   Grid,
   LogIn,
   LayoutDashboard,
+  LogOut,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const { theme, setTheme } = useTheme();
   const router = useRouter();
-  const { user } = useAuth(); // Get user from auth context
+  const { user, logout } = useAuth(); // Add logout to the destructuring
 
   // Add mounting state to prevent hydration mismatch
   const [mounted, setMounted] = useState(false);
@@ -284,6 +285,19 @@ export default function Header() {
                   >
                     <LayoutDashboard className="h-5 w-5" /> Admin Dashboard
                   </Link>
+                )}
+
+                {/* Add Logout Button - Only show if user is logged in */}
+                {user && (
+                  <button
+                    onClick={() => {
+                      logout();
+                      setIsMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors text-red-500 mt-4"
+                  >
+                    <LogOut className="h-5 w-5" /> Log out
+                  </button>
                 )}
               </nav>
             </SheetContent>
