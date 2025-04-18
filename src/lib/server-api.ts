@@ -60,6 +60,7 @@ export async function getAllProducts(filters = {}) {
     const materials = params?.materials
       ? params.materials.split(",")
       : undefined;
+    const search = params?.search;
 
     // Build query
     const query: any = {};
@@ -86,6 +87,15 @@ export async function getAllProducts(filters = {}) {
       query.material = {
         $in: materials.map((m: string) => new RegExp(m, "i")),
       };
+    }
+
+    // Add search query to the filter if present
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+        { category: { $regex: search, $options: "i" } },
+      ];
     }
 
     console.log("Product query:", JSON.stringify(query));

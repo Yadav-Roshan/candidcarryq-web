@@ -11,12 +11,25 @@ export function ProductsPageClient() {
   const { products, isLoading } = useProducts();
   const searchParams = useSearchParams();
   const [filteredProducts, setFilteredProducts] = useState(products);
+  const [searchQuery, setSearchQuery] = useState(searchParams?.get("search") || "");
 
   // Apply filters whenever products change or search params change
   useEffect(() => {
     if (isLoading) return;
 
     let result = [...products];
+
+    // Search query filter - add this before other filters
+    const searchTerm = searchParams?.get("search");
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.name.toLowerCase().includes(term) ||
+          (p.description && p.description.toLowerCase().includes(term)) ||
+          (p.category && p.category.toLowerCase().includes(term))
+      );
+    }
 
     // Category filter
     const category = searchParams?.get("category");
@@ -88,6 +101,21 @@ export function ProductsPageClient() {
 
   return (
     <>
+      {searchParams?.get("search") && (
+        <div className="mb-6">
+          <h2 className="text-xl font-medium">
+            Search results for "{searchParams.get("search")}"
+            {filteredProducts.length > 0 ? (
+              <span className="text-muted-foreground ml-2">
+                ({filteredProducts.length} items found)
+              </span>
+            ) : (
+              <span className="text-muted-foreground ml-2">(No items found)</span>
+            )}
+          </h2>
+        </div>
+      )}
+
       <div className="mb-4">
         <ProductFilters />
       </div>
