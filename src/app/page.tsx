@@ -13,7 +13,9 @@ import { generateMetadata } from "@/lib/metadata";
 export const metadata = generateMetadata({
   title: "CandidCarryQ: Online Shopping Nepal – Buy Luxury Bags, Backpacks & Travel Accessories",
   description: "Shop online at Candid CarryQ, Nepal’s destination for luxury handbags, backpacks, and travel bags. Discover authentic craftsmanship, elegant designs, and durable materials. Free delivery & easy returns available.",
-});
+  google-site-verification : "R2kFSG4q0cnzkjjuDmFDKILnNewCo6MoBC6nwf9ycg8",},);
+
+//<meta name="google-site-verification" content="R2kFSG4q0cnzkjjuDmFDKILnNewCo6MoBC6nwf9ycg8" />
 
 export default async function Home() {
   // This will run only on the server
