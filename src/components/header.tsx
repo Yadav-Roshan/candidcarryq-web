@@ -52,7 +52,7 @@ export default function Header() {
       <header className="w-full bg-background border-b">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center">
-            <img src="/logo.png" alt="CandidCarryq Logo" className="h-12 min-w-[100px] max-w-none" />
+            <img src="/logo.png" alt="CandidCarryq Logo" className="h-12 w-12 max-w-none" />
           </div>
 
           {/* Placeholder for buttons */}
